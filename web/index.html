@@ -7,6 +7,7 @@
   <!-- Link Google Fonts untuk Poppins -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
   <style>
+    /* Atur body sebagai kontainer utama */
     body {
       font-family: 'Poppins', sans-serif;
       text-align: center;
@@ -16,14 +17,71 @@
       align-items: center;
       height: 100vh;
       margin: 0;
+      position: relative;
+      overflow: hidden;
     }
+    /* Container background teks FeedEZ (opsional) */
+    .background-text-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+      gap: 20px;
+      z-index: -1;
+    }
+    .background-text {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 100px;
+      font-weight: bold;
+      color: rgba(92, 184, 92, 0.1);
+      pointer-events: none;
+    }
+    /* Container dashboard - lebar container dapat ditingkatkan bila perlu */
     .container {
       width: 90%;
-      max-width: 400px;
+      max-width: 500px; /* Sesuaikan lebar container jika informasi tidak muat */
       background: white;
       padding: 20px;
       border-radius: 10px;
       box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+      position: relative; /* Agar elemen child dapat diposisikan absolute */
+      z-index: 1;
+    }
+    /* Logo FeedEZ di pojok kiri atas container */
+    .logo {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #5cb85c;
+    }
+    /* Informasi hari, tanggal, dan jam di pojok kanan atas container dengan tampilan dekoratif */
+    .date-info {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #fff;
+      text-align: right;
+      line-height: 1.2;
+      padding: 10px 15px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #4CAF50, #8BC34A);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.7);
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    }
+    /* Tambahan margin-top untuk judul agar tidak tertutup oleh elemen atas */
+    #mainScreen h2 {
+      margin-top: 50px;
     }
     .time {
       font-size: 48px;
@@ -70,7 +128,7 @@
       margin: 0 auto;
       display: block;
     }
-    /* Styling untuk round slider (circular slider) */
+    /* Styling round slider (circular slider) */
     #knobCanvas {
       margin: 20px auto;
       display: block;
@@ -78,7 +136,7 @@
       background-color: #f9f9f9;
       border-radius: 50%;
     }
-    /* Styling untuk tombol panah */
+    /* Styling tombol panah untuk slider */
     #arrowContainer {
       width: 150px;
       margin: 20px auto 0;
@@ -109,15 +167,29 @@
   </style>
 </head>
 <body>
-  <!-- Tampilan Utama -->
+  <!-- Optional: Background teks FeedEZ -->
+  <div class="background-text-container">
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+  </div>
+  
+  <!-- Dashboard Container -->
   <div class="container" id="mainScreen">
+    <!-- Logo FeedEZ di pojok kiri atas -->
+    <div class="logo">FeedEZ</div>
+    <!-- Informasi hari, tanggal, dan jam di pojok kanan atas -->
+    <div class="date-info" id="dateInfo"></div>
     <h2>Pakan Selanjutnya</h2>
     <div class="time" id="feedTime">14:00</div>
     <button class="button feed-now" onclick="feedNow()">Jalankan Sekarang</button>
     <button class="button schedule" onclick="showSchedule()">Lihat Jadwal</button>
     <button class="button settings" onclick="openSettings()">Pengaturan</button>
   </div>
-
+  
   <!-- Tampilan Lihat Jadwal -->
   <div class="container hidden" id="scheduleScreen">
     <h2>Jadwal Pakan</h2>
@@ -145,7 +217,6 @@
     <h2>Pengaturan Pelontar Pakan</h2>
     <p>Pilih kecepatan pelontar dengan memutar slider:</p>
     <canvas id="knobCanvas" width="150" height="150"></canvas>
-    <!-- Tombol panah untuk mengubah speed -->
     <div id="arrowContainer">
       <button class="arrow-button" onclick="decreaseSpeed()">&#9664;</button>
       <button class="arrow-button" onclick="increaseSpeed()">&#9654;</button>
@@ -156,12 +227,40 @@
   </div>
 
   <script>
+    // Fungsi untuk memperbarui hari, tanggal, dan jam secara real-time
+    function updateDateTime() {
+      const dateInfo = document.getElementById("dateInfo");
+      const now = new Date();
+      const dayNames = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+      const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+      
+      const day = dayNames[now.getDay()];
+      const date = now.getDate();
+      const month = monthNames[now.getMonth()];
+      const year = now.getFullYear();
+      
+      let hours = now.getHours();
+      let minutes = now.getMinutes();
+      let seconds = now.getSeconds();
+      
+      // Format angka nol di depan bila perlu
+      hours   = hours   < 10 ? "0" + hours   : hours;
+      minutes = minutes < 10 ? "0" + minutes : minutes;
+      seconds = seconds < 10 ? "0" + seconds : seconds;
+      
+      // Format: "Senin, 12 Februari 2025" dan "14:05:20"
+      dateInfo.innerHTML = `${day}, ${date} ${month} ${year}<br>${hours}:${minutes}:${seconds}`;
+    }
+    // Perbarui setiap detik
+    setInterval(updateDateTime, 1000);
+    updateDateTime();
+    
     var isEditing = false;
-    var currentSpeed = 1; // Level 1 sampai 5
+    var currentSpeed = 1; // Level 1 hingga 5
 
-    // Fungsi untuk menginterpolasi warna dari hijau ke merah (Level 1: hijau, Level 5: merah)
+    // Fungsi untuk menentukan warna berdasarkan level
     function getLevelColor(level) {
-      var t = (level - 1) / 4; // 0 untuk level 1, 1 untuk level 5
+      var t = (level - 1) / 4;
       var r = Math.round(255 * t);
       var g = Math.round(255 * (1 - t));
       var b = 0;
@@ -196,14 +295,12 @@
       document.getElementById('mainScreen').classList.remove('hidden');
     }
     
-    // Fungsi untuk menyembunyikan semua tampilan
     function hideAll() {
       document.getElementById('mainScreen').classList.add('hidden');
       document.getElementById('scheduleScreen').classList.add('hidden');
       document.getElementById('settingsScreen').classList.add('hidden');
     }
     
-    // Fungsi toggle edit jadwal (tetap sama seperti sebelumnya)
     function toggleEditSchedule(revertOnly) {
       var table = document.getElementById("scheduleTable");
       var editButton = document.getElementById("editButton");
@@ -242,7 +339,7 @@
       backToMain();
     }
     
-    // --- Kode untuk Round Slider (Circular Slider) dengan tampilan yang lebih menarik ---
+    // Kode untuk round slider (circular slider)
     function drawSlider() {
       var canvas = document.getElementById("knobCanvas");
       var ctx = canvas.getContext("2d");
@@ -250,23 +347,19 @@
       var centerY = canvas.height / 2;
       var radius = 60;
       
-      // Bersihkan canvas dan isi background untuk menghindari artefak
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "#f9f9f9";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      // Definisikan sudut awal dan akhir untuk slider (dalam radian)
-      var startAngle = (-135 * Math.PI) / 180;  // -135°
-      var endAngle = (135 * Math.PI) / 180;       // +135°
+      var startAngle = (-135 * Math.PI) / 180;
+      var endAngle = (135 * Math.PI) / 180;
       
-      // Gambar track penuh dengan gradient dan bayangan
       ctx.save();
       ctx.shadowColor = "rgba(0, 0, 0, 0.15)";
       ctx.shadowBlur = 8;
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius, startAngle, endAngle);
       ctx.lineWidth = 12;
-      // Buat gradient radial untuk track
       var trackGradient = ctx.createRadialGradient(centerX, centerY, radius - 10, centerX, centerY, radius + 10);
       trackGradient.addColorStop(0, "#eee");
       trackGradient.addColorStop(1, "#bbb");
@@ -274,12 +367,10 @@
       ctx.stroke();
       ctx.restore();
       
-      // Hitung sudut untuk level yang dipilih
-      var totalArc = endAngle - startAngle; // 270° dalam radian
-      var stepAngle = totalArc / 4;          // 4 interval untuk 5 level
+      var totalArc = endAngle - startAngle;
+      var stepAngle = totalArc / 4;
       var currentAngle = startAngle + (currentSpeed - 1) * stepAngle;
       
-      // Gambar arc progress dengan warna sesuai level
       ctx.save();
       ctx.beginPath();
       ctx.arc(centerX, centerY, radius, startAngle, currentAngle);
@@ -288,7 +379,6 @@
       ctx.stroke();
       ctx.restore();
       
-      // Gambar tick mark dan marker angka untuk tiap level
       for (var level = 1; level <= 5; level++) {
         var tickAngle = startAngle + (level - 1) * stepAngle;
         ctx.save();
@@ -304,7 +394,6 @@
         ctx.stroke();
         ctx.restore();
         
-        // Gambar marker angka
         ctx.save();
         var markerX = centerX + (radius + 20) * Math.cos(tickAngle);
         var markerY = centerY + (radius + 20) * Math.sin(tickAngle);
@@ -316,11 +405,9 @@
         ctx.restore();
       }
       
-      // Gambar handle (bulatan kecil) di ujung arc progress
       ctx.save();
       var handleX = centerX + radius * Math.cos(currentAngle);
       var handleY = centerY + radius * Math.sin(currentAngle);
-      // Buat gradient untuk handle agar terlihat tiga dimensi
       var handleGradient = ctx.createRadialGradient(handleX, handleY, 2, handleX, handleY, 8);
       handleGradient.addColorStop(0, "#fff");
       handleGradient.addColorStop(1, getLevelColor(currentSpeed));
@@ -333,7 +420,6 @@
       ctx.stroke();
       ctx.restore();
       
-      // Tampilkan teks level di tengah slider dengan sedikit bayangan
       ctx.save();
       ctx.font = "bold 20px Poppins";
       ctx.textAlign = "center";
@@ -344,11 +430,9 @@
       ctx.fillText("L " + currentSpeed, centerX, centerY);
       ctx.restore();
       
-      // Perbarui tampilan teks di bawah slider
       document.getElementById("speedDisplay").textContent = "Kecepatan: Level " + currentSpeed;
     }
     
-    // Fungsi untuk mengubah level dengan tombol panah
     function decreaseSpeed() {
       if (currentSpeed > 1) {
         currentSpeed--;
@@ -362,7 +446,6 @@
       }
     }
     
-    // Event listener untuk klik pada slider
     document.getElementById("knobCanvas").addEventListener("click", function(e) {
       var canvas = this;
       var rect = canvas.getBoundingClientRect();
@@ -370,14 +453,11 @@
       var y = e.clientY - rect.top;
       var centerX = canvas.width / 2;
       var centerY = canvas.height / 2;
-      // Hitung sudut klik relatif terhadap pusat (dalam radian)
       var clickAngle = Math.atan2(y - centerY, x - centerX);
-      // Klamp sudut ke rentang slider: antara -135° dan +135°
       var minAngle = (-135 * Math.PI) / 180;
       var maxAngle = (135 * Math.PI) / 180;
       if (clickAngle < minAngle) clickAngle = minAngle;
       if (clickAngle > maxAngle) clickAngle = maxAngle;
-      // Tentukan level secara diskrit
       var totalArc = maxAngle - minAngle;
       var step = totalArc / 4;
       var level = Math.round((clickAngle - minAngle) / step) + 1;
