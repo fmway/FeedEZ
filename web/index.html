@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Feeder Otomatis</title>
+  <title>Feeder Otomatis Remote</title>
   <!-- Link Google Fonts untuk Poppins -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
   <style>
@@ -42,15 +42,15 @@
       color: rgba(92, 184, 92, 0.1);
       pointer-events: none;
     }
-    /* Container dashboard - lebar container dapat ditingkatkan bila perlu */
+    /* Container untuk tiap tampilan */
     .container {
       width: 90%;
-      max-width: 500px; /* Sesuaikan lebar container jika informasi tidak muat */
+      max-width: 500px;
       background: white;
       padding: 20px;
       border-radius: 10px;
       box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-      position: relative; /* Agar elemen child dapat diposisikan absolute */
+      position: relative;
       z-index: 1;
     }
     /* Logo FeedEZ di pojok kiri atas container */
@@ -62,7 +62,7 @@
       font-weight: bold;
       color: #5cb85c;
     }
-    /* Informasi hari, tanggal, dan jam di pojok kanan atas container dengan tampilan dekoratif */
+    /* Informasi hari, tanggal, dan jam di pojok kanan atas container */
     .date-info {
       position: absolute;
       top: 10px;
@@ -79,8 +79,11 @@
       border: 2px solid rgba(255, 255, 255, 0.7);
       text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
     }
-    /* Tambahan margin-top untuk judul agar tidak tertutup oleh elemen atas */
-    #mainScreen h2 {
+    /* Margin-top untuk judul */
+    #mainScreen h2,
+    #scheduleScreen h2,
+    #settingsScreen h2,
+    #connectionScreen h2 {
       margin-top: 50px;
     }
     .time {
@@ -97,10 +100,18 @@
       cursor: pointer;
       border-radius: 5px;
     }
+    /* Warna default tombol */
     .feed-now { background-color: #d9534f; }
     .schedule { background-color: #5cb85c; }
     .settings { background-color: #6c757d; }
     .edit { background-color: #f0ad4e; }
+    /* Tombol khusus koneksi diberi warna hijau */
+    .connect-btn {
+      background-color: #4CAF50;
+    }
+    .connect-btn:hover {
+      background-color: #45a049;
+    }
     .hidden { display: none; }
     table {
       width: 100%;
@@ -122,11 +133,22 @@
       border: 1px solid #ddd;
       box-sizing: border-box;
     }
+    /* Lebar input waktu diperbesar agar teks AM/PM tidak terpotong */
     input[type="time"] {
       width: 90%;
-      max-width: 80px;
+      max-width: 200px;
       margin: 0 auto;
       display: block;
+    }
+    /* Styling input untuk serial number dan password */
+    #serialInput,
+    #passwordInput {
+      width: 80%;
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
     }
     /* Styling round slider (circular slider) */
     #knobCanvas {
@@ -164,6 +186,71 @@
       transform: scale(1.1);
       background: linear-gradient(45deg, #E65100, #C62828);
     }
+    /* Styling tombol ceklis untuk baris data (dan header jika tidak di-override) */
+    .check-btn {
+      background: none;
+      border: 2px solid #5cb85c;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      font-size: 16px;
+      cursor: pointer;
+      color: #5cb85c;
+      outline: none;
+      transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+    }
+    .check-btn.checked {
+      background-color: #5cb85c;
+      color: white;
+    }
+    /* Override untuk tombol header select all (id selectAllBtn) */
+    #selectAllBtn {
+      border: 2px solid white !important;
+      color: white !important;
+      transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+    }
+    #selectAllBtn.checked {
+      background-color: blue !important;
+      border-color: blue !important;
+      color: white !important;
+    }
+    #selectAllBtn:active {
+      transform: scale(0.9);
+    }
+    /* Styling untuk toast notifikasi */
+    #toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #333;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 5px;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.5s, visibility 0.5s;
+      z-index: 1000;
+    }
+    #toast.show {
+      opacity: 1;
+      visibility: visible;
+    }
+    /* Styling untuk overlay animasi menghubungkan */
+    #connectingOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      color: #333;
+      z-index: 2;
+    }
   </style>
 </head>
 <body>
@@ -177,11 +264,21 @@
     <div class="background-text">FeedEZ</div>
   </div>
   
+  <!-- Tampilan Awal: Koneksi dengan Input Serial Number dan Password -->
+  <div class="container" id="connectionScreen">
+    <h2>Masukkan Serial Number Alat Anda</h2>
+    <input type="text" id="serialInput" placeholder="Contoh: FEEDER123">
+    <input type="password" id="passwordInput" placeholder="Masukkan password">
+    <button class="button connect-btn" onclick="connectDevice()">Hubungkan Alat</button>
+    <!-- Overlay animasi menghubungkan, tersembunyi secara eksplisit -->
+    <div id="connectingOverlay" style="display:none;">
+      <p>Menghubungkan...</p>
+    </div>
+  </div>
+  
   <!-- Dashboard Container -->
-  <div class="container" id="mainScreen">
-    <!-- Logo FeedEZ di pojok kiri atas -->
+  <div class="container hidden" id="mainScreen">
     <div class="logo">FeedEZ</div>
-    <!-- Informasi hari, tanggal, dan jam di pojok kanan atas -->
     <div class="date-info" id="dateInfo"></div>
     <h2>Pakan Selanjutnya</h2>
     <div class="time" id="feedTime">14:00</div>
@@ -225,47 +322,101 @@
     <button class="button settings" onclick="saveSettings()">Simpan Pengaturan</button>
     <button class="button settings" onclick="backToMain()">Kembali</button>
   </div>
+  
+  <!-- Div untuk notifikasi toast -->
+  <div id="toast"></div>
 
   <script>
-    // Fungsi untuk memperbarui hari, tanggal, dan jam secara real-time
+    // Fungsi untuk menampilkan notifikasi (toast) secara non-blok
+    function showToast(message) {
+      var toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      setTimeout(function(){
+        toast.classList.remove("show");
+      }, 2000);
+    }
+
+    // Fungsi untuk menampilkan animasi "Menghubungkan..." selama 3 detik
+    function showConnectingAnimation() {
+      var overlay = document.getElementById("connectingOverlay");
+      // Tampilkan overlay dengan mengubah style display menjadi "flex"
+      overlay.style.display = "flex";
+      setTimeout(function(){
+        overlay.style.display = "none";
+        goToDashboard();
+      }, 3000);
+    }
+
+    // Fungsi untuk menyembunyikan semua tampilan
+    function hideAll() {
+      document.getElementById('connectionScreen').classList.add('hidden');
+      document.getElementById('mainScreen').classList.add('hidden');
+      document.getElementById('scheduleScreen').classList.add('hidden');
+      document.getElementById('settingsScreen').classList.add('hidden');
+    }
+    
+    // Saat halaman termuat, tampilkan tampilan koneksi
+    window.addEventListener("load", function() {
+      hideAll();
+      document.getElementById("connectionScreen").classList.remove("hidden");
+    });
+    
+    // Fungsi untuk menghubungkan alat berdasarkan serial number dan password
+    function connectDevice() {
+      var serial = document.getElementById("serialInput").value.trim();
+      var password = document.getElementById("passwordInput").value.trim();
+      if(serial === "") {
+        alert("Silakan masukkan serial number alat Anda.");
+        return;
+      }
+      // Jika koneksi untuk serial ini belum tersimpan, periksa password
+      if(!localStorage.getItem("connected_" + serial)) {
+        if(password === "") {
+          alert("Silakan masukkan password untuk alat Anda.");
+          return;
+        }
+        if(password === "1234") {
+          localStorage.setItem("connected_" + serial, true);
+          showToast("Koneksi berhasil ke alat " + serial);
+          showConnectingAnimation();
+        } else {
+          alert("Password salah!");
+        }
+      } else {
+        showConnectingAnimation();
+      }
+    }
+    
+    // Fungsi untuk pindah ke halaman dashboard
+    function goToDashboard() {
+      hideAll();
+      document.getElementById("mainScreen").classList.remove("hidden");
+    }
+    
+    // Perbarui hari, tanggal, dan jam secara real-time
     function updateDateTime() {
       const dateInfo = document.getElementById("dateInfo");
       const now = new Date();
       const dayNames = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
       const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-      
       const day = dayNames[now.getDay()];
       const date = now.getDate();
       const month = monthNames[now.getMonth()];
       const year = now.getFullYear();
-      
       let hours = now.getHours();
       let minutes = now.getMinutes();
       let seconds = now.getSeconds();
-      
-      // Format angka nol di depan bila perlu
       hours   = hours   < 10 ? "0" + hours   : hours;
       minutes = minutes < 10 ? "0" + minutes : minutes;
       seconds = seconds < 10 ? "0" + seconds : seconds;
-      
-      // Format: "Senin, 12 Februari 2025" dan "14:05:20"
       dateInfo.innerHTML = `${day}, ${date} ${month} ${year}<br>${hours}:${minutes}:${seconds}`;
     }
-    // Perbarui setiap detik
     setInterval(updateDateTime, 1000);
     updateDateTime();
     
     var isEditing = false;
     var currentSpeed = 1; // Level 1 hingga 5
-
-    // Fungsi untuk menentukan warna berdasarkan level
-    function getLevelColor(level) {
-      var t = (level - 1) / 4;
-      var r = Math.round(255 * t);
-      var g = Math.round(255 * (1 - t));
-      var b = 0;
-      return "rgb(" + r + "," + g + "," + b + ")";
-    }
     
     function feedNow() {
       alert("Pakan diberikan sekarang!");
@@ -295,34 +446,46 @@
       document.getElementById('mainScreen').classList.remove('hidden');
     }
     
-    function hideAll() {
-      document.getElementById('mainScreen').classList.add('hidden');
-      document.getElementById('scheduleScreen').classList.add('hidden');
-      document.getElementById('settingsScreen').classList.add('hidden');
-    }
-    
+    /* 
+      Fungsi toggleEditSchedule:
+      - Jika mode edit belum aktif, tambahkan kolom header ceklis (default checked)
+        dan ubah sel waktu menjadi input type="time" dengan event listener untuk sinkronisasi.
+      - Jika mode edit aktif, kembalikan tampilan tabel ke semula.
+    */
     function toggleEditSchedule(revertOnly) {
       var table = document.getElementById("scheduleTable");
       var editButton = document.getElementById("editButton");
       
       if (!isEditing) {
+        var headerRow = table.rows[0];
+        var selectAllHeader = document.createElement("th");
+        selectAllHeader.innerHTML = '<button type="button" class="check-btn checked" id="selectAllBtn" onclick="toggleSelectAll(this)">✓</button>';
+        headerRow.insertBefore(selectAllHeader, headerRow.firstChild);
+        
         for (var i = 1; i < table.rows.length; i++) {
-          for (var j = 1; j < table.rows[i].cells.length; j++) {
-            var cell = table.rows[i].cells[j];
+          var row = table.rows[i];
+          var checkCell = row.insertCell(0);
+          checkCell.innerHTML = '<button type="button" class="check-btn checked" onclick="toggleCheck(this)">✓</button>';
+          for (var j = 2; j < row.cells.length; j++) {
+            var cell = row.cells[j];
             var currentValue = cell.textContent.trim();
             cell.innerHTML = '<input type="time" value="' + currentValue + '">';
+            var inputElem = cell.querySelector("input");
+            inputElem.addEventListener("change", syncTime);
           }
         }
         editButton.textContent = "Simpan Jadwal";
         isEditing = true;
       } else {
+        table.rows[0].deleteCell(0);
         for (var i = 1; i < table.rows.length; i++) {
-          for (var j = 1; j < table.rows[i].cells.length; j++) {
-            var cell = table.rows[i].cells[j];
+          var row = table.rows[i];
+          row.deleteCell(0);
+          for (var j = 1; j < row.cells.length; j++) {
+            var cell = row.cells[j];
             var input = cell.querySelector("input");
             if (input) {
-              var newValue = input.value;
-              cell.innerHTML = newValue;
+              cell.innerHTML = input.value;
             }
           }
         }
@@ -331,6 +494,61 @@
         if (!revertOnly) {
           alert("Jadwal telah diperbarui!");
         }
+      }
+    }
+    
+    // Fungsi sinkronisasi: jika salah satu input waktu diubah, nilai baru akan diterapkan ke baris lain yang ceklis.
+    function syncTime(event) {
+      var newTime = event.target.value;
+      var cellIndex = event.target.parentElement.cellIndex;
+      var table = document.getElementById("scheduleTable");
+      
+      for (var i = 1; i < table.rows.length; i++) {
+        var row = table.rows[i];
+        var checkBtn = row.cells[0].querySelector(".check-btn");
+        if (checkBtn && checkBtn.classList.contains("checked")) {
+          var input = row.cells[cellIndex].querySelector("input");
+          if (input && input !== event.target) {
+            input.value = newTime;
+          }
+        }
+      }
+    }
+    
+    // Fungsi untuk toggle status tombol ceklis per baris
+    function toggleCheck(btn) {
+      btn.classList.toggle('checked');
+    }
+    
+    // Fungsi untuk toggle select all (header)
+    function toggleSelectAll(btn) {
+      var table = document.getElementById("scheduleTable");
+      var rows = table.rows;
+      var allSelected = true;
+      
+      for (var i = 1; i < rows.length; i++) {
+        var checkBtn = rows[i].cells[0].querySelector(".check-btn");
+        if (!checkBtn.classList.contains("checked")) {
+          allSelected = false;
+          break;
+        }
+      }
+      
+      for (var i = 1; i < rows.length; i++) {
+        var checkBtn = rows[i].cells[0].querySelector(".check-btn");
+        if (allSelected) {
+          checkBtn.classList.remove("checked");
+        } else {
+          checkBtn.classList.add("checked");
+        }
+      }
+      
+      if (allSelected) {
+        btn.classList.remove("checked");
+        btn.innerHTML = "✓";
+      } else {
+        btn.classList.add("checked");
+        btn.innerHTML = "✓";
       }
     }
     
@@ -431,6 +649,13 @@
       ctx.restore();
       
       document.getElementById("speedDisplay").textContent = "Kecepatan: Level " + currentSpeed;
+    }
+    
+    function getLevelColor(level) {
+      var t = (level - 1) / 4;
+      var r = Math.round(255 * t);
+      var g = Math.round(255 * (1 - t));
+      return "rgb(" + r + "," + g + ",0)";
     }
     
     function decreaseSpeed() {
