@@ -1,5 +1,36 @@
 {
   "nodes": {
+    "arduino-index": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1739836887,
+        "narHash": "sha256-3Qn+fQjMqmZgPlc5vU3HdZ7JZrdyk/gsnmOr03Dci5E=",
+        "owner": "bouk",
+        "repo": "arduino-indexes",
+        "rev": "ec2dd90a15d3b6745c49379a8bdb76b4dc6d5fdb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "bouk",
+        "repo": "arduino-indexes",
+        "type": "github"
+      }
+    },
+    "arduino-nix": {
+      "locked": {
+        "lastModified": 1735332078,
+        "narHash": "sha256-PGZVUTg8BQKL1QgTr3Fcia8RBYYqsbHbx9lIunqdmxQ=",
+        "owner": "bouk",
+        "repo": "arduino-nix",
+        "rev": "dd6c6f4de7d8d8bb460508de911c120dfc35b709",
+        "type": "github"
+      },
+      "original": {
+        "owner": "bouk",
+        "repo": "arduino-nix",
+        "type": "github"
+      }
+    },
     "flake-parts": {
       "inputs": {
         "nixpkgs-lib": "nixpkgs-lib"
@@ -15,6 +46,29 @@
       "original": {
         "owner": "hercules-ci",
         "repo": "flake-parts",
+        "type": "github"
+      }
+    },
+    "fmway-nix": {
+      "inputs": {
+        "flake-parts": [
+          "flake-parts"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1739919194,
+        "narHash": "sha256-UVpCFeMvfDRzLbLXfkfszkyySPMvUIPpM/ubOCgZSYg=",
+        "owner": "fmway",
+        "repo": "fmway.nix",
+        "rev": "e7105508daa33449373dc69715cf18d2f0b3e677",
+        "type": "github"
+      },
+      "original": {
+        "owner": "fmway",
+        "repo": "fmway.nix",
         "type": "github"
       }
     },
@@ -48,7 +102,10 @@
     },
     "root": {
       "inputs": {
+        "arduino-index": "arduino-index",
+        "arduino-nix": "arduino-nix",
         "flake-parts": "flake-parts",
+        "fmway-nix": "fmway-nix",
         "nixpkgs": "nixpkgs"
       }
     }
