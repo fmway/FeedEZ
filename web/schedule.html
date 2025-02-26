@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feeder Otomatis Remote - Jadwal Pakan</title>
+  <link rel="stylesheet" href="schedule.css">
+  <!-- Sertakan Google Fonts jika diperlukan -->
+</head>
+<body>
+  <!-- Optional: Background teks FeedEZ -->
+  <div class="background-text-container">
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+  </div>
+  
+  <div class="container" id="scheduleScreen">
+    <h2>Jadwal Pakan</h2>
+    <table id="scheduleTable">
+      <tr>
+        <th>Hari</th>
+        <th>Waktu 1</th>
+        <th>Waktu 2</th>
+        <th>Waktu 3</th>
+      </tr>
+      <tr><td>Senin</td><td>08:00</td><td>14:00</td><td>20:00</td></tr>
+      <tr><td>Selasa</td><td>08:00</td><td>14:00</td><td>20:00</td></tr>
+      <tr><td>Rabu</td><td>08:00</td><td>14:00</td><td>20:00</td></tr>
+      <tr><td>Kamis</td><td>08:00</td><td>14:00</td><td>20:00</td></tr>
+      <tr><td>Jumat</td><td>08:00</td><td>14:00</td><td>20:00</td></tr>
+      <tr><td>Sabtu</td><td>08:00</td><td>14:00</td><td>20:00</td></tr>
+      <tr><td>Minggu</td><td>08:00</td><td>14:00</td><td>20:00</td></tr>
+    </table>
+    <button class="button edit" id="editButton" onclick="toggleEditSchedule()">Edit Jadwal</button>
+    <button class="button settings" onclick="window.location.href='dashboard.html'">Kembali</button>
+  </div>
+
+  <script>
+    var isEditing = false;
+    function toggleEditSchedule(revertOnly) {
+      var table = document.getElementById("scheduleTable");
+      var editButton = document.getElementById("editButton");
+      
+      if (!isEditing) {
+        var headerRow = table.rows[0];
+        var selectAllHeader = document.createElement("th");
+        selectAllHeader.innerHTML = '<button type="button" class="check-btn checked" id="selectAllBtn" onclick="toggleSelectAll(this)">✓</button>';
+        headerRow.insertBefore(selectAllHeader, headerRow.firstChild);
+        
+        for (var i = 1; i < table.rows.length; i++) {
+          var row = table.rows[i];
+          var checkCell = row.insertCell(0);
+          checkCell.innerHTML = '<button type="button" class="check-btn checked" onclick="toggleCheck(this)">✓</button>';
+          for (var j = 2; j < row.cells.length; j++) {
+            var cell = row.cells[j];
+            var currentValue = cell.textContent.trim();
+            cell.innerHTML = '<input type="time" value="' + currentValue + '">';
+            var inputElem = cell.querySelector("input");
+            inputElem.addEventListener("change", syncTime);
+          }
+        }
+        editButton.textContent = "Simpan Jadwal";
+        isEditing = true;
+      } else {
+        table.rows[0].deleteCell(0);
+        for (var i = 1; i < table.rows.length; i++) {
+          var row = table.rows[i];
+          row.deleteCell(0);
+          for (var j = 1; j < row.cells.length; j++) {
+            var cell = row.cells[j];
+            var input = cell.querySelector("input");
+            if (input) {
+              cell.innerHTML = input.value;
+            }
+          }
+        }
+        editButton.textContent = "Edit Jadwal";
+        isEditing = false;
+        if (!revertOnly) {
+          alert("Jadwal telah diperbarui!");
+        }
+      }
+    }
+    
+    function syncTime(event) {
+      var newTime = event.target.value;
+      var cellIndex = event.target.parentElement.cellIndex;
+      var table = document.getElementById("scheduleTable");
+      
+      for (var i = 1; i < table.rows.length; i++) {
+        var row = table.rows[i];
+        var checkBtn = row.cells[0].querySelector(".check-btn");
+        if (checkBtn && checkBtn.classList.contains("checked")) {
+          var input = row.cells[cellIndex].querySelector("input");
+          if (input && input !== event.target) {
+            input.value = newTime;
+          }
+        }
+      }
+    }
+    
+    function toggleCheck(btn) {
+      btn.classList.toggle('checked');
+    }
+    
+    function toggleSelectAll(btn) {
+      var table = document.getElementById("scheduleTable");
+      var rows = table.rows;
+      var allSelected = true;
+      
+      for (var i = 1; i < rows.length; i++) {
+        var checkBtn = rows[i].cells[0].querySelector(".check-btn");
+        if (!checkBtn.classList.contains("checked")) {
+          allSelected = false;
+          break;
+        }
+      }
+      
+      for (var i = 1; i < rows.length; i++) {
+        var checkBtn = rows[i].cells[0].querySelector(".check-btn");
+        if (allSelected) {
+          checkBtn.classList.remove("checked");
+        } else {
+          checkBtn.classList.add("checked");
+        }
+      }
+      
+      if (allSelected) {
+        btn.classList.remove("checked");
+        btn.innerHTML = "✓";
+      } else {
+        btn.classList.add("checked");
+        btn.innerHTML = "✓";
+      }
+    }
+  </script>
+</body>
+</html>

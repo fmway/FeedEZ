@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Feeder Otomatis Remote - Koneksi</title>
+  <link rel="stylesheet" href="connection.css">
+  <!-- Pastikan font Poppins juga terhubung, misalnya dengan menambahkan:
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
+  -->
+</head>
+<body>
+  <!-- Optional: Background teks FeedEZ -->
+  <div class="background-text-container">
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+  </div>
+  
+  <!-- Tampilan Koneksi -->
+  <div class="container" id="connectionScreen">
+    <h2>Masukkan Serial Number Alat Anda</h2>
+    <input type="text" id="serialInput" placeholder="Contoh: FEEDER123" />
+    <input type="password" id="passwordInput" placeholder="Masukkan password" />
+    <button class="button connect-btn" onclick="connectDevice()">Hubungkan Alat</button>
+    <!-- Overlay animasi menghubungkan -->
+    <div id="connectingOverlay" style="display:none;">
+      <p>Menghubungkan...</p>
+    </div>
+  </div>
+
+  <script>
+    // Fungsi notifikasi sederhana
+    function showToast(message) {
+      alert(message);
+    }
+    // Tampilkan animasi dan arahkan ke dashboard
+    function showConnectingAnimation() {
+      var overlay = document.getElementById("connectingOverlay");
+      overlay.style.display = "flex";
+      setTimeout(function(){
+        overlay.style.display = "none";
+        window.location.href = "dashboard.html";
+      }, 3000);
+    }
+    // Fungsi koneksi
+    function connectDevice() {
+      var serial = document.getElementById("serialInput").value.trim();
+      var password = document.getElementById("passwordInput").value.trim();
+      if(serial === "") {
+        alert("Silakan masukkan serial number alat Anda.");
+        return;
+      }
+      if(!localStorage.getItem("connected_" + serial)) {
+        if(password === "") {
+          alert("Silakan masukkan password untuk alat Anda.");
+          return;
+        }
+        if(password === "1234") {
+          localStorage.setItem("connected_" + serial, true);
+          showToast("Koneksi berhasil ke alat " + serial);
+          showConnectingAnimation();
+        } else {
+          alert("Password salah!");
+        }
+      } else {
+        showConnectingAnimation();
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+
+body {
+  font-family: 'Poppins', sans-serif;
+  text-align: center;
+  background-color: #e9f5e9;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.container {
+  width: 90%;
+  max-width: 500px;
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  position: relative;
+  z-index: 1;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: center;
+}
+
+th { 
+  background-color: #5cb85c;
+  color: white;
+}
+
+.button {
+  width: 100%;
+  padding: 15px;
+  margin: 10px 0;
+  border: none;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.edit { background-color: #f0ad4e; }
+.settings { background-color: #6c757d; }
+
+/* Styling tombol ceklis (bisa disesuaikan) */
+.check-btn {
+  background: none;
+  border: 2px solid #5cb85c;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+  cursor: pointer;
+  color: #5cb85c;
+  outline: none;
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+.check-btn.checked {
+  background-color: #5cb85c;
+  color: white;
+}
+
+.background-text-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 20px;
+  z-index: -1;
+}
+
+.background-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 100px;
+  font-weight: bold;
+  color: rgba(92, 184, 92, 0.1);
+  pointer-events: none;
+}

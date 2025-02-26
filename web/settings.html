@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feeder Otomatis Remote - Pengaturan</title>
+  <link rel="stylesheet" href="settings.css">
+  <!-- Sertakan Google Fonts jika diperlukan -->
+</head>
+<body>
+  <!-- Optional: Background teks FeedEZ -->
+  <div class="background-text-container">
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+    <div class="background-text">FeedEZ</div>
+  </div>
+  
+  <div class="container" id="settingsScreen">
+    <h2>Pengaturan Pelontar Pakan</h2>
+    <p>Pilih kecepatan pelontar dengan memutar slider:</p>
+    <canvas id="knobCanvas" width="150" height="150"></canvas>
+    <div id="arrowContainer">
+      <button class="arrow-button" onclick="decreaseSpeed()">&#9664;</button>
+      <button class="arrow-button" onclick="increaseSpeed()">&#9654;</button>
+    </div>
+    <p id="speedDisplay">Kecepatan: Level 1</p>
+    <button class="button settings" onclick="saveSettings()">Simpan Pengaturan</button>
+    <button class="button settings" onclick="window.location.href='dashboard.html'">Kembali</button>
+  </div>
+
+  <script>
+    var currentSpeed = 1; // Level 1 hingga 5
+
+    function drawSlider() {
+      var canvas = document.getElementById("knobCanvas");
+      var ctx = canvas.getContext("2d");
+      var centerX = canvas.width / 2;
+      var centerY = canvas.height / 2;
+      var radius = 60;
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#f9f9f9";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      var startAngle = (-135 * Math.PI) / 180;
+      var endAngle = (135 * Math.PI) / 180;
+      
+      ctx.save();
+      ctx.shadowColor = "rgba(0, 0, 0, 0.15)";
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+      ctx.lineWidth = 12;
+      var trackGradient = ctx.createRadialGradient(centerX, centerY, radius - 10, centerX, centerY, radius + 10);
+      trackGradient.addColorStop(0, "#eee");
+      trackGradient.addColorStop(1, "#bbb");
+      ctx.strokeStyle = trackGradient;
+      ctx.stroke();
+      ctx.restore();
+      
+      var totalArc = endAngle - startAngle;
+      var stepAngle = totalArc / 4;
+      var currentAngle = startAngle + (currentSpeed - 1) * stepAngle;
+      
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, startAngle, currentAngle);
+      ctx.lineWidth = 12;
+      ctx.strokeStyle = getLevelColor(currentSpeed);
+      ctx.stroke();
+      ctx.restore();
+      
+      // Buat tanda level
+      for (var level = 1; level <= 5; level++) {
+        var tickAngle = startAngle + (level - 1) * stepAngle;
+        ctx.save();
+        ctx.beginPath();
+        var tickStartX = centerX + (radius - 5) * Math.cos(tickAngle);
+        var tickStartY = centerY + (radius - 5) * Math.sin(tickAngle);
+        var tickEndX = centerX + (radius + 5) * Math.cos(tickAngle);
+        var tickEndY = centerY + (radius + 5) * Math.sin(tickAngle);
+        ctx.moveTo(tickStartX, tickStartY);
+        ctx.lineTo(tickEndX, tickEndY);
+        ctx.strokeStyle = "#333";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+        
+        ctx.save();
+        var markerX = centerX + (radius + 20) * Math.cos(tickAngle);
+        var markerY = centerY + (radius + 20) * Math.sin(tickAngle);
+        ctx.font = "bold 16px Poppins";
+        ctx.fillStyle = "#333";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(level, markerX, markerY);
+        ctx.restore();
+      }
+      
+      ctx.save();
+      var handleX = centerX + radius * Math.cos(currentAngle);
+      var handleY = centerY + radius * Math.sin(currentAngle);
+      var handleGradient = ctx.createRadialGradient(handleX, handleY, 2, handleX, handleY, 8);
+      handleGradient.addColorStop(0, "#fff");
+      handleGradient.addColorStop(1, getLevelColor(currentSpeed));
+      ctx.beginPath();
+      ctx.arc(handleX, handleY, 8, 0, 2 * Math.PI);
+      ctx.fillStyle = handleGradient;
+      ctx.fill();
+      ctx.strokeStyle = "#333";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+      
+      ctx.save();
+      ctx.font = "bold 20px Poppins";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = "rgba(0,0,0,0.3)";
+      ctx.shadowBlur = 4;
+      ctx.fillStyle = "#000";
+      ctx.fillText("L " + currentSpeed, centerX, centerY);
+      ctx.restore();
+      
+      document.getElementById("speedDisplay").textContent = "Kecepatan: Level " + currentSpeed;
+    }
+    
+    function getLevelColor(level) {
+      var t = (level - 1) / 4;
+      var r = Math.round(255 * t);
+      var g = Math.round(255 * (1 - t));
+      return "rgb(" + r + "," + g + ",0)";
+    }
+    
+    function decreaseSpeed() {
+      if (currentSpeed > 1) {
+        currentSpeed--;
+        drawSlider();
+      }
+    }
+    function increaseSpeed() {
+      if (currentSpeed < 5) {
+        currentSpeed++;
+        drawSlider();
+      }
+    }
+    
+    document.getElementById("knobCanvas").addEventListener("click", function(e) {
+      var canvas = this;
+      var rect = canvas.getBoundingClientRect();
+      var x = e.clientX - rect.left;
+      var y = e.clientY - rect.top;
+      var centerX = canvas.width / 2;
+      var centerY = canvas.height / 2;
+      var clickAngle = Math.atan2(y - centerY, x - centerX);
+      var minAngle = (-135 * Math.PI) / 180;
+      var maxAngle = (135 * Math.PI) / 180;
+      if (clickAngle < minAngle) clickAngle = minAngle;
+      if (clickAngle > maxAngle) clickAngle = maxAngle;
+      var totalArc = maxAngle - minAngle;
+      var step = totalArc / 4;
+      var level = Math.round((clickAngle - minAngle) / step) + 1;
+      if (level < 1) level = 1;
+      if (level > 5) level = 5;
+      currentSpeed = level;
+      drawSlider();
+    });
+    
+    function saveSettings() {
+      alert("Pengaturan disimpan! Kecepatan pelontar: Level " + currentSpeed);
+      window.location.href = "dashboard.html";
+    }
+    
+    // Gambar slider saat halaman dimuat
+    drawSlider();
+  </script>
+</body>
+</html>
