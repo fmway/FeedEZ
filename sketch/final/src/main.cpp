@@ -7,11 +7,11 @@ FeedEZ feed;
 unsigned long time_alarm = -1;
 
 void setup() {
-  menu.init(1);
+  menu.init(4);
   plus.init(2);
   minus.init(3);
-  select.init(4);
-  feed.init(5); 
+  select.init(1);
+  feed.init(8); 
 }
 
 void loop() {

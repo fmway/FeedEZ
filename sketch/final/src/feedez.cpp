@@ -4,9 +4,9 @@
 #include <stdint.h>
 
 void din(uint8_t speed) {
-  analogWrite(11, speed);
-  digitalWrite(9, LOW);
-  digitalWrite(10, HIGH);
+  analogWrite(7, speed);
+  digitalWrite(5, LOW);
+  digitalWrite(6, HIGH);
 }
 
 FeedEZ::FeedEZ() {
@@ -59,7 +59,7 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
     f();
     din(255);
     for (uint8_t i = 0; i < 10; i++) {
-      servo.write(180);
+      servo.write(45);
       delay(7500);
       servo.write(0);
       delay(2500);
@@ -75,10 +75,9 @@ void FeedEZ::init(uint8_t servo_pin) {
   lcd.init();
   lcd.init();
   lcd.backlight();
+  pinMode(7, OUTPUT);
+  pinMode(5, OUTPUT);
   pinMode(6, OUTPUT);
-  pinMode(11, OUTPUT);
-  pinMode(9, OUTPUT);
-  pinMode(10, OUTPUT);
   din(0);
 }
 
