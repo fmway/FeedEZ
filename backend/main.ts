@@ -12,6 +12,7 @@ interface Setting {
   duration: number,
   schedules: Schedule[],
 }
+let isOnline = false;
 
 const clients: WSContext<WebSocket>[] = [];
 const devices: WSContext<WebSocket>[] = [];
@@ -60,6 +61,8 @@ app
       onMessage(e, ws) {
         console.log("data from clients: ", e.data.toString());
         devices.forEach(x => x.send(e.data.toString()))
+        isOnline = !isOnline;
+        clients.filter(x => x != ws).forEach(x => x.send(`${isOnline}`));
       },
     }))(c, next)
   })
