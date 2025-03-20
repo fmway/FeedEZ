@@ -85,7 +85,7 @@ bool SetFeeding::next(uint8_t count_feeding) {
     this->time.idx++;
   } else if (this->time.next()) {
     this->time.idx++;
-    return this->time.idx < count_feeding;
+    return this->time.idx <= count_feeding;
   }
   return true;
 }
@@ -203,9 +203,9 @@ void TimeSelect::setState(TimeSelect::State state) {
 
 void TimeSelect::decrement() {
   if (this->state == SET_HOUR)
-    time.setHour(time.hour == 0 ? 24 : time.hour - 1);
+    time.setHour(time.hour == 0 ? 23 : time.hour - 1);
   else
-    time.setMinute(time.minute == 0 ? 60 : time.minute - 1);
+    time.setMinute(time.minute == 0 ? 59 : time.minute - 1);
 }
 
 MyTime TimeSelect::getTime() {
@@ -252,10 +252,15 @@ bool TimeSelect::next() {
 void Display::handle(Display::ButtonHandle handle) {
   switch (handle) {
     case MENU_BUTTON:
-      if (page != Display::STANDBY)
+      if (page != Display::STANDBY) {
         this->setPage(Display::STANDBY);
-      else
-       this->setPage(Display::MENUSET);
+        this->feedingTimes.clear();
+        this->FeedingSet.setState(SetFeeding::SET_COUNT);
+        this->FeedingSet.time.setState(TimeSelect::SET_HOUR);
+        this->FeedingSet.time.idx = 0;
+      } else {
+        this->setPage(Display::MENUSET);
+      }
       break;
     case MINUS_BUTTON:
       if (page == Display::MENUSET) {
@@ -292,13 +297,20 @@ void Display::handle(Display::ButtonHandle handle) {
       }
       break;
     case SELECT_BUTTON:
-      if (page == Display::MENUSET) {
+      if (page == Display::STANDBY) {
+        this->_click();
+      } else if (page == Display::MENUSET) {
         this->setPage(this->menu.getState());
       } else if (page == Display::SET_FEEDING) {
+        if (this->FeedingSet.getState() == SetFeeding::SET_COUNT) {
+          this->FeedingSet.time.setState(TimeSelect::SET_HOUR);
+          this->FeedingSet.time.idx = 0;
+        }
         if (!this->FeedingSet.next(this->count_feeding)) {
           this->_save();
           this->feedingTimes.clear();
           this->setPage(STANDBY);
+          this->FeedingSet.setState(SetFeeding::SET_COUNT);
         }
       } else if (page == Display::SET_SPEED)  {
         this->_save();
@@ -313,4 +325,8 @@ void Display::_save() {
   /*for (uint8_t i; i < feedingTimes.size(); i++)*/
   /*  data[i] = feedingTimes.at(i);*/
   this->_on_save(speed, feedingTimes.size(), feedingTimes.data());
+}
+
+void Display::on_click(vl::Func<void()> click) {
+  this->_click = click;
 }

@@ -4,16 +4,17 @@
 #include <stdint.h>
 
 void din(uint8_t speed) {
-  analogWrite(7, speed);
-  digitalWrite(5, LOW);
-  digitalWrite(6, HIGH);
+  analogWrite(5, speed);
+  digitalWrite(6, LOW);
+  digitalWrite(7, HIGH);
 }
 
 FeedEZ::FeedEZ() {
   this->load();
   this->display.on_save([this] (uint8_t speed, uint8_t count, SmallTime * feedingTimes) {
     this->setSpeed(speed);
-    this->setFeedingTimes(count, feedingTimes);
+    if (count > 0)
+      this->setFeedingTimes(count, feedingTimes);
     this->save();
   });
 }
@@ -46,26 +47,43 @@ void FeedEZ::setFeedingTimes(uint8_t count, SmallTime feedingTimes[]) {
 
 void FeedEZ::on_alarm(vl::Func<void()> f) {
   auto now = rtc.now();
-  auto is_alarm = false;
+  int alarm_stop = -1;
+  int time = now.hour() * 3600 + now.minute() * 60 + now.second();
 
   for (uint8_t i = 0; i < this->data.count_feeding; ++i) {
-    if (now.hour() == this->data.feeding_times[i * 2] && now.minute() == this->data.feeding_times[i * 2 + 1]) {
-      is_alarm = true;
+    int start = this->data.feeding_times[i * 2] * 3600 + this->data.feeding_times[i * 2 + 1] * 60;
+    int stop = start + this->longTime;
+    if (time >= start && time < stop) {
+      alarm_stop = stop;
       break;
     }
   }
 
-  if (is_alarm) {
-    f();
-    din(255);
-    for (uint8_t i = 0; i < 10; i++) {
-      servo.write(45);
-      delay(7500);
-      servo.write(0);
-      delay(2500);
+  if (alarm_stop > -1) {
+    if (time < alarm_stop) {
+      this->run();
+      f();
     }
-    din(0);
+  } else {
+    this->stop();
   }
+}
+
+void FeedEZ::run() {
+  this->showDisplay();
+  din(this->el_kecepatan[this->data.speed -1]);
+  if (this->statePrev == 0 || millis() - this->statePrev >= this->intervalAlarm[int(this->isOpen)]) {
+    this->statePrev = millis();
+    this->isOpen = !this->isOpen;
+    servo.write(this->isOpen ? 45 : 0);
+  }
+}
+
+void FeedEZ::stop() {
+  this->isOpen = false;
+  this->statePrev = 0;
+  servo.write(0);
+  din(0);
 }
 
 void FeedEZ::init(uint8_t servo_pin) {
@@ -75,14 +93,14 @@ void FeedEZ::init(uint8_t servo_pin) {
   lcd.init();
   lcd.init();
   lcd.backlight();
-  pinMode(7, OUTPUT);
   pinMode(5, OUTPUT);
   pinMode(6, OUTPUT);
+  pinMode(7, OUTPUT);
   din(0);
 }
 
 void FeedEZ::showDisplay() {
-  this->display.show(lcd, rtc.now(), this->data.speed);
+  this->display.show(lcd, rtc.now(), this->el_kecepatan[this->data.speed - 1]);
 }
 
 void FeedEZ::save() {
@@ -92,8 +110,8 @@ void FeedEZ::save() {
   // save feeding times
   Storage::write(1, this->data.count_feeding);
   for (uint8_t i = 0; i < this->data.count_feeding; i++) {
-    Storage::write(i * 1 + 2, this->data.feeding_times[i * 2]);
-    Storage::write(i * 1 + 3, this->data.feeding_times[i * 2 + 1]);
+    Storage::write(i * 2 + 2, this->data.feeding_times[i * 2]);
+    Storage::write(i * 2 + 3, this->data.feeding_times[i * 2 + 1]);
   }
 }
 

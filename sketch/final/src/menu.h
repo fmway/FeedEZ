@@ -112,6 +112,7 @@ public:
   void prevMenu();
   void handle(ButtonHandle handle);
   void on_save(vl::Func<void(uint8_t, uint8_t, SmallTime *)>);
+  void on_click(vl::Func<void()>);
 private:
   void _save();
 public:
@@ -129,6 +130,7 @@ private:
   SetFeeding FeedingSet;
   Vector<SmallTime> feedingTimes = _initial;
   vl::Func<void(uint8_t, uint8_t, SmallTime *)> _on_save;
+  vl::Func<void()> _click;
 };
 
 #endif // !_MY_MENU_H

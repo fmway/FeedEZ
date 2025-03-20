@@ -1,358 +1,365 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   Alert,
   StyleSheet,
-  ScrollView
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { DateTimePickerAndroid, DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-interface ScheduleItem {
-  day: string;
-  pagi: string;
-  siang: string;
-  malam: string;
+// Fungsi untuk membagi array jadi chunk berukuran 'size'
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    result.push(arr.slice(i, i + size));
+  }
+  return result;
 }
-
-// Data awal
-const initialSchedule: ScheduleItem[] = [
-  { day: 'Senin',  pagi: '08:00', siang: '14:00', malam: '20:00' },
-  { day: 'Selasa', pagi: '08:00', siang: '14:00', malam: '20:00' },
-  { day: 'Rabu',   pagi: '08:00', siang: '14:00', malam: '20:00' },
-  { day: 'Kamis',  pagi: '08:00', siang: '14:00', malam: '20:00' },
-  { day: 'Jumat',  pagi: '08:00', siang: '14:00', malam: '20:00' },
-  { day: 'Sabtu',  pagi: '08:00', siang: '14:00', malam: '20:00' },
-  { day: 'Minggu', pagi: '08:00', siang: '14:00', malam: '20:00' },
-];
 
 export default function ScheduleScreen() {
   const router = useRouter();
 
-  // State untuk data jadwal
-  const [schedule, setSchedule] = useState<ScheduleItem[]>(initialSchedule);
-  // Mode edit
+  // times: array jam, misalnya ["08:00", "14:00", "20:00", ...]
+  const [times, setTimes] = useState<string[]>(["00:00", "00:00", "00:00"]);
   const [isEditing, setIsEditing] = useState(false);
-  // Menyimpan status “dicentang” per baris
-  const [selectedRows, setSelectedRows] = useState<{ [index: number]: boolean }>({});
+  const [schedule, setSchedule] = useState<{ hour: number, minute: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingText, setLoadingText] = useState('');
 
-  // Toggle antara Edit Jadwal dan Simpan Jadwal
+  useEffect(() => {
+    fetch("https://feedez.deno.dev/settings")
+    .then(x => x.json())
+    .then(x => {
+      if (x.schedules) {
+        setSchedule(x.schedules as { hour: number, minute: number }[]);
+        setTimeout(() => setLoading(false), 750);
+      }
+      console.log(x)
+    })
+  }, [])
+
+   useEffect(() => {
+      const text = "Loading...";
+      let index = 0;
+      const interval = setInterval(() => {
+        setLoadingText(text.slice(0, index + 1));
+        index++;
+        if (index === text.length) {
+          index = 0; // Reset untuk looping efek
+        }
+      }, 50);
+      return () => clearInterval(interval);
+    }, []);
+
+  useEffect(() => {
+    setTimes(schedule.map(x => `${String(x.hour).padStart(2, "0")}:${String(x.minute).padStart(2, "0")}`))
+  }, [schedule])
+
+  const CHUNK_SIZE = 4;
+
   const toggleEditSchedule = () => {
     if (isEditing) {
-      Alert.alert('Info', 'Jadwal telah diperbarui!');
+      fetch("https://feedez.deno.dev/settings", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          schedules: times.map(x => {
+            const [ hour, minute ] = x.split(":").map(y => parseInt(y));
+            return { hour, minute }
+          })
+        })
+      })
+      .then(x => x.json())
+      .then(x => {
+        Alert.alert("Info", "Jadwal telah diperbarui!");
+      })
     }
     setIsEditing(!isEditing);
   };
 
-  // Fungsi mengupdate satu sel (pagi/siang/malam) pada baris tertentu
-  const updateTime = (dayIndex: number, meal: 'pagi' | 'siang' | 'malam', newTime: string) => {
-    setSchedule((prev) =>
-      prev.map((item, idx) => {
-        if (idx === dayIndex) {
-          return { ...item, [meal]: newTime };
-        }
-        return item;
-      })
+  const addNewSchedule = () => {
+    setTimes(prev => [...prev, "00:00"]);
+  };
+
+  const removeSchedule = (colIndex: number) => {
+    Alert.alert(
+      "Konfirmasi",
+      `Hapus Jadwal ${colIndex + 1}?`,
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Ya, Hapus",
+          style: "destructive",
+          onPress: () => {
+            setTimes(prev => {
+              const newTimes = [...prev];
+              newTimes.splice(colIndex, 1);
+              return newTimes;
+            });
+          },
+        },
+      ]
     );
   };
 
-  // Toggle centang baris
-  const toggleSelectRow = (index: number) => {
-    setSelectedRows((prev) => ({
-      ...prev,
-      [index]: !prev[index],
-    }));
+  const updateTime = (colIndex: number, newTime: string) => {
+    setTimes(prev => {
+      const newTimes = [...prev];
+      newTimes[colIndex] = newTime;
+      return newTimes;
+    });
   };
 
-  // Cek All: jika semua sudah dicentang, maka uncheck semua. Jika belum semua, check semua.
-  const toggleSelectAll = () => {
-    const allSelected = schedule.every((_, idx) => selectedRows[idx]);
-    if (allSelected) {
-      // Uncheck all
-      setSelectedRows({});
-    } else {
-      // Check all
-      const newSelection: { [index: number]: boolean } = {};
-      schedule.forEach((_, idx) => {
-        newSelection[idx] = true;
-      });
-      setSelectedRows(newSelection);
-    }
-  };
+  const chunkedTimes = chunkArray(times, CHUNK_SIZE);
 
-  // Render satu baris dalam tabel
-  const renderTableRow = (item: ScheduleItem, index: number) => {
+  const renderHeaderRow = (chunk: string[], rowIndex: number) => {
     return (
-      <View style={styles.tableRow} key={item.day}>
-        {/* Kolom Hari */}
-        <Text style={styles.tableCell}>{item.day}</Text>
+      <View key={`header-row-${rowIndex}`} style={styles.headerRow}>
+        {chunk.map((_, i) => {
+          const colIndex = rowIndex * CHUNK_SIZE + i;
+          if (isEditing) {
+            return (
+              <View key={`header-${colIndex}`} style={styles.headerCellWithDelete}>
+                <Text style={styles.headerText}>Jadwal {colIndex + 1}</Text>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => removeSchedule(colIndex)}
+                >
+                  <Text style={styles.deleteButtonText}>X</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          } else {
+            return (
+              <Text key={`header-${colIndex}`} style={styles.headerCell}>
+                Jadwal {colIndex + 1}
+              </Text>
+            );
+          }
+        })}
+      </View>
+    );
+  };
 
-        {/* Kolom Pagi */}
-        {isEditing ? (
-          <TextInput
-            style={styles.tableCellInput}
-            value={item.pagi}
-            onChangeText={(text) => {
-              // Jika baris dicentang, sinkron ke baris lain yang juga dicentang
-              if (selectedRows[index]) {
-                setSchedule((prev) =>
-                  prev.map((rowItem, rowIdx) => {
-                    if (selectedRows[rowIdx]) {
-                      return { ...rowItem, pagi: text };
-                    }
-                    return rowItem;
-                  })
-                );
-              } else {
-                updateTime(index, 'pagi', text);
-              }
-            }}
-          />
-        ) : (
-          <Text style={styles.tableCell}>{item.pagi}</Text>
-        )}
+  const renderDataRow = (chunk: string[], rowIndex: number) => {
+    return (
+      <View key={`data-row-${rowIndex}`} style={styles.dataRow}>
+        {chunk.map((time, i) => {
+          const colIndex = rowIndex * CHUNK_SIZE + i;
 
-        {/* Kolom Siang */}
-        {isEditing ? (
-          <TextInput
-            style={styles.tableCellInput}
-            value={item.siang}
-            onChangeText={(text) => {
-              if (selectedRows[index]) {
-                setSchedule((prev) =>
-                  prev.map((rowItem, rowIdx) => {
-                    if (selectedRows[rowIdx]) {
-                      return { ...rowItem, siang: text };
-                    }
-                    return rowItem;
-                  })
-                );
-              } else {
-                updateTime(index, 'siang', text);
-              }
-            }}
-          />
-        ) : (
-          <Text style={styles.tableCell}>{item.siang}</Text>
-        )}
+          const showTimePicker = () => {
+            DateTimePickerAndroid.open({
+              value: new Date(),
+              mode: "time",
+              is24Hour: true,
+              onChange: (event: DateTimePickerEvent, selectedDate?: Date) => {
+                // Hanya update waktu jika pengguna klik OK (event.type === 'set')
+                if (event.type === 'set' && selectedDate) {
+                  const hours = selectedDate.getHours().toString().padStart(2, "0");
+                  const minutes = selectedDate.getMinutes().toString().padStart(2, "0");
+                  updateTime(colIndex, `${hours}:${minutes}`);
+                }
+                // Jika event.type === 'dismissed', jangan update waktu
+              },
+            });
+          };
 
-        {/* Kolom Malam */}
-        {isEditing ? (
-          <TextInput
-            style={styles.tableCellInput}
-            value={item.malam}
-            onChangeText={(text) => {
-              if (selectedRows[index]) {
-                setSchedule((prev) =>
-                  prev.map((rowItem, rowIdx) => {
-                    if (selectedRows[rowIdx]) {
-                      return { ...rowItem, malam: text };
-                    }
-                    return rowItem;
-                  })
-                );
-              } else {
-                updateTime(index, 'malam', text);
-              }
-            }}
-          />
-        ) : (
-          <Text style={styles.tableCell}>{item.malam}</Text>
-        )}
+          if (isEditing) {
+            return (
+              <TouchableOpacity
+                key={`time-${colIndex}`}
+                style={styles.cellInput}
+                onPress={showTimePicker}
+              >
+                <Text style={{ textAlign: "center" }}>{time}</Text>
+              </TouchableOpacity>
+            );
+          } else {
+            return (
+              <Text key={`time-${colIndex}`} style={styles.cell}>
+                {time}
+              </Text>
+            );
+          }
+        })}
+      </View>
+    );
+  };
+
+  const renderTable = () => {
+    return (
+      <View style={styles.table}>
+        {chunkedTimes.map((chunk, rowIndex) => {
+          return (
+            <View key={`table-row-${rowIndex}`}>
+              {renderHeaderRow(chunk, rowIndex)}
+              {renderDataRow(chunk, rowIndex)}
+            </View>
+          );
+        })}
       </View>
     );
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <View style={styles.container}>
       <Text style={styles.title}>Jadwal Pakan</Text>
 
-      {/* Tabel: Hanya kolom Hari, Pagi, Siang, Malam */}
-      <View style={styles.table}>
-        {/* Header */}
-        <View style={styles.tableRowHeader}>
-          <Text style={styles.tableHeaderCell}>Hari</Text>
-          <Text style={styles.tableHeaderCell}>Pagi</Text>
-          <Text style={styles.tableHeaderCell}>Siang</Text>
-          <Text style={styles.tableHeaderCell}>Malam</Text>
-        </View>
-
-        {/* Body */}
-        {schedule.map((item, index) => renderTableRow(item, index))}
-      </View>
-
-      {/* Checkbox di luar tabel, hanya tampil saat edit */}
       {isEditing && (
-        <View style={styles.checkboxContainer}>
-          {/* Tombol “Cek All” */}
-          <View style={styles.checkboxHeader}>
-            <Text style={{ fontWeight: 'bold', marginRight: 10 }}>Pilih Baris:</Text>
-            <TouchableOpacity style={styles.checkAllButton} onPress={toggleSelectAll}>
-              <Text style={styles.checkAllButtonText}>Cek All</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Daftar checkbox per baris */}
-          {schedule.map((item, index) => (
-            <View key={item.day} style={styles.checkboxRow}>
-              <TouchableOpacity
-                style={[styles.checkButton, selectedRows[index] && styles.checkButtonChecked]}
-                onPress={() => toggleSelectRow(index)}
-              >
-                <Text style={styles.checkButtonText}>{selectedRows[index] ? '✓' : ''}</Text>
-              </TouchableOpacity>
-              <Text style={styles.checkboxLabel}>{item.day}</Text>
-            </View>
-          ))}
-        </View>
+        <TouchableOpacity style={styles.addButton} onPress={addNewSchedule}>
+          <Text style={styles.addButtonText}>+ Tambah Jadwal</Text>
+        </TouchableOpacity>
       )}
 
-      {/* Tombol Edit / Simpan */}
+      {renderTable()}
+
       <TouchableOpacity style={[styles.button, styles.editButton]} onPress={toggleEditSchedule}>
-        <Text style={styles.buttonText}>{isEditing ? 'Simpan Jadwal' : 'Edit Jadwal'}</Text>
+        <Text style={styles.buttonText}>{isEditing ? "Simpan Jadwal" : "Edit Jadwal"}</Text>
       </TouchableOpacity>
 
-        {/* Tombol Kembali */}
-        <TouchableOpacity
+      <TouchableOpacity
         style={[styles.button, styles.settingsButton]}
         onPress={() => {
-          // Jika sedang edit, matikan edit agar “kembali” ke tampilan lihat jadwal
           if (isEditing) {
             setIsEditing(false);
           } else {
-            // Jika tidak edit, kembali ke screen sebelumnya
             router.back();
           }
         }}
       >
         <Text style={styles.buttonText}>Kembali</Text>
       </TouchableOpacity>
-    </ScrollView>
+      <Modal transparent visible={loading}>
+              <View style={styles.overlay}>
+                <Text style={styles.overlayText}>{loadingText}</Text>
+              </View>
+      </Modal>
+    </View>
   );
 }
 
-// ====================== StyleSheet ======================
+// ============== StyleSheet ==============
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
+    flex: 1,
+    backgroundColor: "#e9f5e9",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
-    backgroundColor: '#e9f5e9',
   },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overlayText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  
   title: {
     fontSize: 20,
-    fontWeight: '600',
-    marginVertical: 10,
-    textAlign: 'center',
+    fontWeight: "600",
+    marginBottom: 20,
+    textAlign: "center",
   },
-
-  // Tabel
-  table: {
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    marginVertical: 10,
-  },
-  tableRowHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#5cb85c',
-  },
-  tableHeaderCell: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    padding: 8,
-    textAlign: 'center',
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  tableRow: {
-    flexDirection: 'row',
-  },
-  tableCell: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    padding: 8,
-    textAlign: 'center',
-  },
-  tableCellInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    padding: 8,
-    textAlign: 'center',
-    backgroundColor: '#fff',
-  },
-
-  // Bagian checkbox di luar tabel
-  checkboxContainer: {
-    width: '100%',
-    paddingVertical: 10,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: 10,
-  },
-  checkboxHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 5,
-    paddingHorizontal: 10,
-  },
-  checkAllButton: {
-    backgroundColor: '#5cb85c',
+  addButton: {
+    backgroundColor: "#5cb85c",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 5,
+    marginVertical: 10,
   },
-  checkAllButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+  addButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
-  checkboxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 5,
-    paddingHorizontal: 10,
+  table: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    width: "90%",
+    marginBottom: 20,
   },
-  checkButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    borderWidth: 2,
-    borderColor: '#5cb85c',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
+  headerRow: {
+    flexDirection: "row",
+    backgroundColor: "#5cb85c",
   },
-  checkButtonChecked: {
-    backgroundColor: '#5cb85c',
+  headerCell: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    padding: 8,
+    textAlign: "center",
+    color: "white",
+    fontWeight: "bold",
   },
-  checkButtonText: {
-    color: '#fff',
-    fontSize: 16,
+  headerCellWithDelete: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 5,
+    paddingVertical: 8,
   },
-  checkboxLabel: {
-    fontSize: 16,
+  headerText: {
+    color: "white",
+    fontWeight: "bold",
   },
-
-  // Tombol
+  deleteButton: {
+    backgroundColor: "red",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  dataRow: {
+    flexDirection: "row",
+  },
+  cell: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    padding: 8,
+    textAlign: "center",
+  },
+  cellInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    padding: 8,
+    textAlign: "center",
+    backgroundColor: "#fff",
+  },
   button: {
-    width: '80%',
+    width: "80%",
     padding: 15,
     marginVertical: 10,
     borderRadius: 5,
-    alignItems: 'center',
+    alignItems: "center",
   },
   editButton: {
-    backgroundColor: '#f0ad4e',
+    backgroundColor: "#f0ad4e",
   },
   settingsButton: {
-    backgroundColor: '#6c757d',
+    backgroundColor: "#6c757d",
   },
   buttonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
   },
 });

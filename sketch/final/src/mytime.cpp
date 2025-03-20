@@ -20,15 +20,15 @@ MyTime::MyTime(uint8_t hour, uint8_t minute, uint8_t second) {
 }
 
 void MyTime::setHour(uint8_t hour) {
-  this->hour = hour < 24 ? hour : 24;
+  this->hour = hour < 23 ? hour : 23;
 }
 
 void MyTime::setMinute(uint8_t minute) {
-  this->minute = minute < 60 ? minute : 60;
+  this->minute = minute < 59 ? minute : 59;
 }
 
 void MyTime::setSecond(uint8_t second) {
-  this->second = second < 60 ? second : 60;
+  this->second = second < 59 ? second : 59;
 }
 
 String MyTime::toString() {

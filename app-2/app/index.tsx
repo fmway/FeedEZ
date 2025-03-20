@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   TextInput,
   TouchableOpacity,
   Alert,
@@ -9,17 +8,17 @@ import {
   Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { MyText } from '@/components/MyText';
 
 export default function ConnectionScreen() {
   const router = useRouter();
-
   const [serial, setSerial] = useState('');
   const [password, setPassword] = useState('');
   const [connecting, setConnecting] = useState(false);
 
   const connectDevice = () => {
     if (!serial.trim()) {
-      Alert.alert('Error', 'Silakan masukkan serial number alat Anda.');
+      Alert.alert('Error', 'Silakan masukkan ID alat Anda.');
       return;
     }
     if (!password.trim()) {
@@ -30,9 +29,8 @@ export default function ConnectionScreen() {
       Alert.alert('Error', 'Password salah!');
       return;
     }
-    setConnecting(true);
 
-    // Setelah 3 detik, ganti rute ke "/dashboard"
+    setConnecting(true);
     setTimeout(() => {
       setConnecting(false);
       router.replace('/dashboard');
@@ -41,34 +39,38 @@ export default function ConnectionScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Masukkan Serial Number Alat Anda</Text>
+      <MyText style={styles.title}>Login FeedEZ</MyText>
+
       <TextInput
         style={styles.input}
-        placeholder="Contoh: FEEDER123"
+        placeholder="Masukkan ID"
+        placeholderTextColor="#999"
         value={serial}
         onChangeText={setSerial}
       />
+
       <TextInput
         style={styles.input}
         placeholder="Masukkan password"
+        placeholderTextColor="#999"
         secureTextEntry
         value={password}
         onChangeText={setPassword}
       />
+
       <TouchableOpacity style={[styles.button, styles.connectButton]} onPress={connectDevice}>
-        <Text style={styles.buttonText}>Hubungkan Alat</Text>
+        <MyText style={styles.buttonText}>Hubungkan Alat</MyText>
       </TouchableOpacity>
 
       <Modal transparent visible={connecting}>
         <View style={styles.overlay}>
-          <Text style={styles.overlayText}>Menghubungkan...</Text>
+          <MyText style={styles.overlayText}>Menghubungkan...</MyText>
         </View>
       </Modal>
     </View>
   );
 }
 
-// Contoh style
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -95,13 +97,18 @@ const styles = StyleSheet.create({
   },
   input: {
     width: '80%',
-    height: 40,
+    height: 50,  // Pastikan cukup tinggi
     borderColor: '#ccc',
     borderWidth: 1,
     borderRadius: 5,
     marginVertical: 10,
-    paddingHorizontal: 10,
+    fontFamily: 'Poppins',
+    paddingHorizontal: 15, 
     backgroundColor: '#fff',
+    fontSize: 16,
+    lineHeight: 22,  // Agar teks tidak terpotong
+    textAlignVertical: 'center', // Untuk Android
+    paddingVertical: 12, // Tambahkan padding agar teks tidak kepotong
   },
   button: {
     width: '80%',

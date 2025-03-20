@@ -31,6 +31,8 @@ public:
   void save();
   void load();
   void on_alarm(vl::Func<void()>);
+  void run();
+  void stop();
 private:
   Dinamo dinamo;
 public:
@@ -44,6 +46,12 @@ private:
   Servo servo;
   RTC_DS3231 rtc;
   LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, 16, 2);
+  unsigned long intervalAlarm[2] = { 3000, 80 };
+  unsigned long statePrev = 0;
+  bool isOpen = false;
+  // int alarm_stop = -1;
+  int el_kecepatan[5] = { 120, 150, 190, 220, 255 };
+  unsigned long longTime = 6 * 60 + 30; // 6 minute 30 second
 };
 
 #endif // !_FEED_EZ_H
