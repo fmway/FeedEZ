@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        #status {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .connected { background: #dff0d8; color: #3c763d; }
+        .disconnected { background: #f2dede; color: #a94442; }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        #messages {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Demo</h1>
+    <div id="status" class="disconnected">Status: Not Connected</div>
+    <button id="connectBtn" onclick="connect()">Connect</button>
+    <button id="actionBtn" onclick="sendMessage()" disabled>Click Me!</button>
+    
+    <div id="messages"></div>
+
+    <script>
+        let ws = null
+        const messagesDiv = document.getElementById('messages')
+        const statusDiv = document.getElementById('status')
+        const actionBtn = document.getElementById('actionBtn')
+        const connectBtn = document.getElementById('connectBtn')
+
+        function logMessage(message, isSent = false) {
+            const msgElement = document.createElement('div')
+            msgElement.style.color = isSent ? 'blue' : 'green'
+            msgElement.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`
+            messagesDiv.appendChild(msgElement)
+            messagesDiv.scrollTop = messagesDiv.scrollHeight
+        }
+
+        function updateStatus(connected) {
+            statusDiv.className = connected ? 'connected' : 'disconnected'
+            statusDiv.textContent = `Status: ${connected ? 'Connected' : 'Disconnected'}`
+            actionBtn.disabled = !connected
+            connectBtn.textContent = connected ? 'Disconnect' : 'Connect'
+        }
+
+        function connect() {
+            if (ws) {
+                ws.close()
+                ws = null
+                updateStatus(false)
+                return
+            }
+
+            ws = new WebSocket('wss://studious-guacamole-q7qg7qrrq9x7c4gv-8000.app.github.dev/ws/client')
+
+            ws.onopen = () => {
+                updateStatus(true)
+                logMessage('Connected to server')
+            }
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data)
+                logMessage(`Server: ${data.message}`)
+            }
+
+            ws.onclose = () => {
+                logMessage('Connection closed')
+                updateStatus(false)
+                ws = null
+            }
+
+            ws.onerror = (error) => {
+                logMessage(`Error: ${error.message}`)
+                console.log(error);
+                updateStatus(false)
+            }
+        }
+
+        function sendMessage() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert('Not connected to server!')
+                return
+            }
+
+            const message = {
+                type: 'button_click',
+                timestamp: new Date().toISOString(),
+                message: 'Button was clicked!'
+            }
+            
+            ws.send(JSON.stringify(message))
+            logMessage(`Sent: ${JSON.stringify(message)}`, true)
+        }
+    </script>
+</body>
+</html>
