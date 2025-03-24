@@ -25,8 +25,8 @@ public:
   /*FeedEZ(uint8_t count_feeding, const MyTime feedingTimes[]);*/
   /*FeedEZ(uint8_t speed, uint8_t count_feeding, const MyTime feedingTimes[]);*/
   void init(uint8_t servo_pin);
-  void setSpeed(uint8_t speed);
-  void setFeedingTimes(uint8_t count, SmallTime feedingTimes[]);
+  void setSpeed(uint8_t speed, bool notification = true);
+  void setFeedingTimes(uint8_t count, SmallTime feedingTimes[], bool notification = true);
   void showDisplay();
   void save();
   void load();

@@ -32,13 +32,14 @@ FeedEZ::FeedEZ() {
 /*  this->setFeedingTimes(count_feeding, feedingTimes);*/
 /*}*/
 
-void FeedEZ::setSpeed(uint8_t speed) {
+void FeedEZ::setSpeed(uint8_t speed, bool notification) {
   this->data.speed = speed;
   this->display.setSpeed(speed);
-  Serial.println(String() + "SET_SPEED, " + speed);
+  if (notification)
+    Serial.println(String() + "SET_SPEED, " + speed);
 }
 
-void FeedEZ::setFeedingTimes(uint8_t count, SmallTime feedingTimes[]) {
+void FeedEZ::setFeedingTimes(uint8_t count, SmallTime feedingTimes[], bool notification) {
   this->data.count_feeding = count;
   String txt = "SET_FEEDING";
   for (uint8_t i = 0; i < count; i++) {
@@ -50,7 +51,8 @@ void FeedEZ::setFeedingTimes(uint8_t count, SmallTime feedingTimes[]) {
     txt += ":";
     txt += t.minute;
   }
-  Serial.println(txt);
+  if (notification)
+    Serial.println(txt);
 }
 
 void FeedEZ::on_alarm(vl::Func<void()> f) {
@@ -96,6 +98,15 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
 
     if (data.equals("GET_STATUS_RUN")) {
       Serial.println(String() + "STATUS_RUN, " + (this->isRun ? "TRUE" : "FALSE"));
+    } else if (data.length() > 0) {
+      int index = data.indexOf(',');
+      auto cmd = data.substring(0, index);
+      cmd.trim();
+      data = data.substring(index+1);
+      data.trim();
+      if (cmd.equals("SET_SPEED")) {
+        this->setSpeed(data.toInt(), false);
+      }
     }
   }
 }
