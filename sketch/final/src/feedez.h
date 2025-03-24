@@ -50,6 +50,7 @@ private:
   unsigned long statePrev = 0;
   bool isOpen = false;
   // int alarm_stop = -1;
+  bool isRun = false;
   int el_kecepatan[5] = { 120, 150, 190, 220, 255 };
   unsigned long longTime = 6 * 60 + 30; // 6 minute 30 second
 };

@@ -5,12 +5,14 @@ Event event;
 Button menu, plus, minus, select;
 FeedEZ feed;
 unsigned long time_alarm = -1;
+bool state = false;
+#define buzzerPin 12
 
 void setup() {
   menu.init(4);
   plus.init(2);
   minus.init(3);
-  select.init(1);
+  select.init(9);
   feed.init(8); 
 }
 
