@@ -112,18 +112,23 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
       }
       if (cmd.equals("SET_FEEDING")) {
         int i = 0;
+        Serial.print("FEEDING");
         while (data.length() > 0) {
           index = data.indexOf(',');
-          if (index == -1)
+          if (index == -1) {
+            Serial.print(String() + ", " + data);
+            this->data.feeding_times[i] = data.toInt();
             break;
-
-          chunk = data.substring(0, index);
-          chuck.trim();
+          }
+          auto chunk = data.substring(0, index);
+          chunk.trim();
+          Serial.print(String() + ", " + chunk);
           data = data.substring(index+1);
           data.trim();
           this->data.feeding_times[i] = chunk.toInt();
           i++;
         }
+        Serial.println();
         this->data.count_feeding = i;
       }
     }
@@ -169,7 +174,7 @@ void FeedEZ::init(uint8_t servo_pin) {
 }
 
 void FeedEZ::showDisplay() {
-  this->display.show(lcd, rtc.now(), this->el_kecepatan[this->data.speed - 1]);
+  this->display.show(lcd, rtc.now(), this->el_kecepatan[this->data.speed - 1], this->data.feeding_times[0], this->data.feeding_times[1]);
 }
 
 void FeedEZ::save() {

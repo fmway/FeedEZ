@@ -32,11 +32,12 @@ Display::Page Display::getPage() {
   return this->page;
 }
 
-void Display::show(LiquidCrystal_I2C lcd, DateTime now, uint8_t speed) {
+void Display::show(LiquidCrystal_I2C lcd, DateTime now, uint8_t speed, uint8_t hour, uint8_t minute) {
   switch (this->page) {
   case STANDBY:
     lcd.setCursor(0, 0);
-    lcd.print(MyTime(now.hour(), now.minute(), now.second()).toStringWithSecond() + F("  "));
+    // lcd.print(MyTime(now.hour(), now.minute(), now.second()).toStringWithSecond() + F("  "));
+    lcd.print(MyTime(hour, minute).toString() + F("     "));
     lcd.setCursor(0, 1);
     lcd.print(MyDate(now.day(), now.month(), now.year()).toString());
     lcd.setCursor(10, 0);
