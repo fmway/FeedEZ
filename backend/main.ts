@@ -41,7 +41,7 @@ app
     if (body.schedules) {
       setting.schedules.splice(0, setting.schedules.length);
       setting.schedules.push(...body.schedules);
-      const txt = ["SET_FEEDING", ...setting.schedules.map(x => `${x.hour}:${x.minute}`)].join(", ");
+      const txt = ["SET_FEEDING", ...setting.schedules.map(x => [ x.hour, x.minute ])].flat().join(", ");
       devices.forEach(x => x.send(txt));
     }
     if (body.speed) {
@@ -88,6 +88,10 @@ app
         //setTimeout(() => {
         devices.push(ws);
         console.log("Connected devices: ", devices.length);
+        const txt = ["SET_FEEDING", ...setting.schedules.map(x => [ x.hour, x.minute ])].flat().join(", ");
+        ws.send("SET_SPEED, " + setting.speed)
+        ws.send(txt);
+        ws.send("SET_DURATION, " + setting.duration)
         //}, idleTimeout * 1000 + 100)
       },
       onClose(e, ws) {

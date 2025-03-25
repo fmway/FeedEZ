@@ -107,8 +107,33 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
       if (cmd.equals("SET_SPEED")) {
         this->setSpeed(data.toInt(), false);
       }
+      if (cmd.equals("SET_DURATION")) {
+        this->setDuration(data.toInt(), false);
+      }
+      if (cmd.equals("SET_FEEDING")) {
+        int i = 0;
+        while (data.length() > 0) {
+          index = data.indexOf(',');
+          if (index == -1)
+            break;
+
+          chunk = data.substring(0, index);
+          chuck.trim();
+          data = data.substring(index+1);
+          data.trim();
+          this->data.feeding_times[i] = chunk.toInt();
+          i++;
+        }
+        this->data.count_feeding = i;
+      }
     }
   }
+}
+
+void FeedEZ::setDuration(uint8_t duration, bool notification) {
+  this->longTime = duration;
+  if (notification)
+    Serial.println(String() + "SET_DURATION, " + duration);
 }
 
 void FeedEZ::run() {
