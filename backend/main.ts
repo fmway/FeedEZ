@@ -42,6 +42,7 @@ app
       setting.schedules.splice(0, setting.schedules.length);
       setting.schedules.push(...body.schedules);
       const txt = ["SET_FEEDING", ...setting.schedules.map(x => [ x.hour, x.minute ])].flat().join(", ");
+      console.log(txt);
       devices.forEach(x => x.send(txt));
     }
     if (body.speed) {
