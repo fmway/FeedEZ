@@ -6,12 +6,13 @@ import {
   Alert,
   StyleSheet,
   Modal,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { DateTimePickerAndroid, DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Fungsi untuk membagi array jadi chunk berukuran 'size'
+// Fungsi untuk membagi array menjadi chunk dengan ukuran tertentu
 function chunkArray<T>(arr: T[], size: number): T[][] {
   const result: T[][] = [];
   for (let i = 0; i < arr.length; i += size) {
@@ -23,183 +24,137 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 export default function ScheduleScreen() {
   const router = useRouter();
 
-  // times: array jam, misalnya ["08:00", "14:00", "20:00", ...]
-  const [times, setTimes] = useState<string[]>(["00:00", "00:00", "00:00"]);
+  // State "times" selalu memiliki 12 elemen. Setiap elemen berupa string "hh:mm" atau "" jika belum diatur.
+  const [times, setTimes] = useState<string[]>(Array(12).fill(""));
   const [isEditing, setIsEditing] = useState(false);
   const [schedule, setSchedule] = useState<{ hour: number, minute: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingText, setLoadingText] = useState('');
 
+  // Ambil data jadwal dari server dan isi array "times"
   useEffect(() => {
     fetch("https://feedez.deno.dev/settings")
-    .then(x => x.json())
-    .then(x => {
-      if (x.schedules) {
-        setSchedule(x.schedules as { hour: number, minute: number }[]);
-        setTimeout(() => setLoading(false), 750);
-      }
-      console.log(x)
-    })
-  }, [])
-
-   useEffect(() => {
-      const text = "Loading...";
-      let index = 0;
-      const interval = setInterval(() => {
-        setLoadingText(text.slice(0, index + 1));
-        index++;
-        if (index === text.length) {
-          index = 0; // Reset untuk looping efek
+      .then(x => x.json())
+      .then(x => {
+        if (x.schedules) {
+          const fetched = (x.schedules as { hour: number, minute: number }[])
+            .map(sch => `${String(sch.hour).padStart(2, "0")}:${String(sch.minute).padStart(2, "0")}`);
+          const newTimes = [...fetched];
+          while (newTimes.length < 12) {
+            newTimes.push("");
+          }
+          setTimes(newTimes);
+          setSchedule(x.schedules);
+          setTimeout(() => setLoading(false), 750);
         }
-      }, 50);
-      return () => clearInterval(interval);
-    }, []);
+      })
+      .catch(err => console.error(err));
+  }, []);
 
+  // Efek loading (typing effect)
   useEffect(() => {
-    setTimes(schedule.map(x => `${String(x.hour).padStart(2, "0")}:${String(x.minute).padStart(2, "0")}`))
-  }, [schedule])
+    const text = "Loading...";
+    let index = 0;
+    const interval = setInterval(() => {
+      setLoadingText(text.slice(0, index + 1));
+      index++;
+      if (index === text.length) {
+        index = 0;
+      }
+    }, 50);
+    return () => clearInterval(interval);
+  }, []);
 
-  const CHUNK_SIZE = 4;
+  // Fungsi untuk mengupdate waktu pada sel tertentu
+  const updateTime = (cellIndex: number, newTime: string) => {
+    setTimes(prev => {
+      const newTimes = [...prev];
+      newTimes[cellIndex] = newTime;
+      return newTimes;
+    });
+  };
+
+  // Fungsi untuk membuka time picker dan mengupdate sel yang ditekan
+  const showTimePicker = (cellIndex: number) => {
+    DateTimePickerAndroid.open({
+      value: new Date(),
+      mode: "time",
+      is24Hour: true,
+      onChange: (event: DateTimePickerEvent, selectedDate?: Date) => {
+        if (event.type === 'set' && selectedDate) {
+          const hours = selectedDate.getHours().toString().padStart(2, "0");
+          const minutes = selectedDate.getMinutes().toString().padStart(2, "0");
+          updateTime(cellIndex, `${hours}:${minutes}`);
+        }
+      },
+    });
+  };
+
+  // Array "times" selalu berukuran 12, jadi bagi ke dalam 4 baris dengan 3 kolom
+  const CHUNK_SIZE = 3;
+  const chunkedTimes = chunkArray(times, CHUNK_SIZE);
 
   const toggleEditSchedule = () => {
     if (isEditing) {
+      // Saat menyimpan, filter hanya sel yang terisi untuk dikirim ke server
+      const schedulesToSave = times
+        .filter(time => time !== "")
+        .map(x => {
+          const [hour, minute] = x.split(":").map(y => parseInt(y));
+          return { hour, minute };
+        });
       fetch("https://feedez.deno.dev/settings", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          schedules: times.map(x => {
-            const [ hour, minute ] = x.split(":").map(y => parseInt(y));
-            return { hour, minute }
-          })
+          schedules: schedulesToSave,
         })
       })
-      .then(x => x.json())
-      .then(x => {
-        Alert.alert("Info", "Jadwal telah diperbarui!");
-      })
+        .then(x => x.json())
+        .then(x => {
+          Alert.alert("Info", "Jadwal telah diperbarui!");
+        });
     }
     setIsEditing(!isEditing);
   };
 
-  const addNewSchedule = () => {
-    setTimes(prev => [...prev, "00:00"]);
-  };
-
-  const removeSchedule = (colIndex: number) => {
+  // Hapus jadwal: set sel menjadi kosong
+  const removeSchedule = (cellIndex: number) => {
     Alert.alert(
       "Konfirmasi",
-      `Hapus Jadwal ${colIndex + 1}?`,
+      `Hapus Jadwal ${cellIndex + 1}?`,
       [
         { text: "Batal", style: "cancel" },
         {
           text: "Ya, Hapus",
           style: "destructive",
           onPress: () => {
-            setTimes(prev => {
-              const newTimes = [...prev];
-              newTimes.splice(colIndex, 1);
-              return newTimes;
-            });
+            updateTime(cellIndex, "");
           },
         },
       ]
     );
   };
 
-  const updateTime = (colIndex: number, newTime: string) => {
-    setTimes(prev => {
-      const newTimes = [...prev];
-      newTimes[colIndex] = newTime;
-      return newTimes;
-    });
-  };
-
-  const chunkedTimes = chunkArray(times, CHUNK_SIZE);
-
-  const renderHeaderRow = (chunk: string[], rowIndex: number) => {
+  // Render header untuk tiap baris (selalu 3 kolom)
+  const renderHeaderRow = (rowIndex: number) => {
     return (
       <View key={`header-row-${rowIndex}`} style={styles.headerRow}>
-        {chunk.map((_, i) => {
-          const colIndex = rowIndex * CHUNK_SIZE + i;
-          if (isEditing) {
-            return (
-              <View key={`header-${colIndex}`} style={styles.headerCellWithDelete}>
-                <Text style={styles.headerText}>Jadwal {colIndex + 1}</Text>
+        {Array.from({ length: 3 }).map((_, i) => {
+          const cellIndex = rowIndex * 3 + i;
+          return (
+            <View key={`header-${cellIndex}`} style={styles.headerCell}>
+              <Text style={styles.headerText}>Jadwal {cellIndex + 1}</Text>
+              {isEditing && times[cellIndex] !== "" && (
                 <TouchableOpacity
                   style={styles.deleteButton}
-                  onPress={() => removeSchedule(colIndex)}
+                  onPress={() => removeSchedule(cellIndex)}
                 >
                   <Text style={styles.deleteButtonText}>X</Text>
                 </TouchableOpacity>
-              </View>
-            );
-          } else {
-            return (
-              <Text key={`header-${colIndex}`} style={styles.headerCell}>
-                Jadwal {colIndex + 1}
-              </Text>
-            );
-          }
-        })}
-      </View>
-    );
-  };
-
-  const renderDataRow = (chunk: string[], rowIndex: number) => {
-    return (
-      <View key={`data-row-${rowIndex}`} style={styles.dataRow}>
-        {chunk.map((time, i) => {
-          const colIndex = rowIndex * CHUNK_SIZE + i;
-
-          const showTimePicker = () => {
-            DateTimePickerAndroid.open({
-              value: new Date(),
-              mode: "time",
-              is24Hour: true,
-              onChange: (event: DateTimePickerEvent, selectedDate?: Date) => {
-                // Hanya update waktu jika pengguna klik OK (event.type === 'set')
-                if (event.type === 'set' && selectedDate) {
-                  const hours = selectedDate.getHours().toString().padStart(2, "0");
-                  const minutes = selectedDate.getMinutes().toString().padStart(2, "0");
-                  updateTime(colIndex, `${hours}:${minutes}`);
-                }
-                // Jika event.type === 'dismissed', jangan update waktu
-              },
-            });
-          };
-
-          if (isEditing) {
-            return (
-              <TouchableOpacity
-                key={`time-${colIndex}`}
-                style={styles.cellInput}
-                onPress={showTimePicker}
-              >
-                <Text style={{ textAlign: "center" }}>{time}</Text>
-              </TouchableOpacity>
-            );
-          } else {
-            return (
-              <Text key={`time-${colIndex}`} style={styles.cell}>
-                {time}
-              </Text>
-            );
-          }
-        })}
-      </View>
-    );
-  };
-
-  const renderTable = () => {
-    return (
-      <View style={styles.table}>
-        {chunkedTimes.map((chunk, rowIndex) => {
-          return (
-            <View key={`table-row-${rowIndex}`}>
-              {renderHeaderRow(chunk, rowIndex)}
-              {renderDataRow(chunk, rowIndex)}
+              )}
             </View>
           );
         })}
@@ -207,51 +162,205 @@ export default function ScheduleScreen() {
     );
   };
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Jadwal Pakan</Text>
-
-      {isEditing && (
-        <TouchableOpacity style={styles.addButton} onPress={addNewSchedule}>
-          <Text style={styles.addButtonText}>+ Tambah Jadwal</Text>
-        </TouchableOpacity>
-      )}
-
-      {renderTable()}
-
-      <TouchableOpacity style={[styles.button, styles.editButton]} onPress={toggleEditSchedule}>
-        <Text style={styles.buttonText}>{isEditing ? "Simpan Jadwal" : "Edit Jadwal"}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.button, styles.settingsButton]}
-        onPress={() => {
+  // Render baris data (sel) untuk tiap baris
+  const renderDataRow = (rowData: string[], rowIndex: number) => {
+    return (
+      <View key={`data-row-${rowIndex}`} style={styles.dataRow}>
+        {rowData.map((time, i) => {
+          const cellIndex = rowIndex * 3 + i;
           if (isEditing) {
-            setIsEditing(false);
+            return (
+              <TouchableOpacity
+                key={`cell-${cellIndex}`}
+                style={styles.cellInput}
+                onPress={() => showTimePicker(cellIndex)}
+              >
+                <Text style={styles.cellText}>
+                  {time !== "" ? time : "Atur"}
+                </Text>
+              </TouchableOpacity>
+            );
           } else {
-            router.back();
-          }
-        }}
-      >
-        <Text style={styles.buttonText}>Kembali</Text>
-      </TouchableOpacity>
-      <Modal transparent visible={loading}>
-              <View style={styles.overlay}>
-                <Text style={styles.overlayText}>{loadingText}</Text>
+            return (
+              <View key={`cell-${cellIndex}`} style={styles.cell}>
+                <Text style={styles.cellText}>{time}</Text>
               </View>
+            );
+          }
+        })}
+      </View>
+    );
+  };
+
+  // Render keseluruhan tabel (grid tetap 12 sel)
+  const renderTable = () => {
+    return (
+      <View style={styles.tableContainer}>
+        {chunkedTimes.map((rowData, rowIndex) => (
+          <View key={`row-${rowIndex}`} style={styles.tableRow}>
+            {renderHeaderRow(rowIndex)}
+            {renderDataRow(rowData, rowIndex)}
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <Text style={styles.title}>Jadwal Pakan</Text>
+
+        {/* Container tabel tetap berukuran 12 sel */}
+        <View style={styles.card}>
+          {renderTable()}
+        </View>
+
+        {/* Tombol aksi tetap di bawah */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={[styles.button, styles.editButton]} onPress={toggleEditSchedule}>
+            <Text style={styles.buttonText}>{isEditing ? "Simpan Jadwal" : "Edit Jadwal"}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.backButton]}
+            onPress={() => {
+              if (isEditing) {
+                setIsEditing(false);
+              } else {
+                router.back();
+              }
+            }}
+          >
+            <Text style={styles.buttonText}>Kembali</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+
+      <Modal transparent visible={loading}>
+        <View style={styles.overlay}>
+          <Text style={styles.overlayText}>{loadingText}</Text>
+        </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
-// ============== StyleSheet ==============
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#e9f5e9",
-    justifyContent: "center",
-    alignItems: "center",
+  },
+  scrollContainer: {
     padding: 20,
+    alignItems: "center",
+  },
+  title: {
+    top:15,
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#5cb85c",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  card: {
+    top: 30,
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 5,
+    padding: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+    marginBottom: 20,
+  },
+  tableContainer: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+  tableRow: {
+    marginBottom: 0,
+  },
+  headerRow: {
+    flexDirection: "row",
+    backgroundColor: "#5cb85c",
+  },
+  headerCell: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    paddingVertical: 10,
+    alignItems: "center",
+    position: "relative",
+  },
+  headerText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  deleteButton: {
+    backgroundColor: "red",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "absolute",
+    right: 2,
+    top: 2,
+  },
+  deleteButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 12,
+  },
+  dataRow: {
+    flexDirection: "row",
+  },
+  cell: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  cellInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    paddingVertical: 12,
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+  cellText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#333",
+  },
+  buttonContainer: {
+    width: "100%",
+    alignItems: "center",
+    marginTop: 20,
+    top:45,
+  },
+  button: {
+    width: "80%",
+    padding: 15,
+    borderRadius: 8,
+    alignItems: "center",
+    marginVertical: 8,
+  },
+  editButton: {
+    backgroundColor: "#f0ad4e",
+  },
+  backButton: {
+    backgroundColor: "#6c757d",
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
   overlay: {
     flex: 1,
@@ -263,103 +372,5 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
-  },
-  
-  title: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  addButton: {
-    backgroundColor: "#5cb85c",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 5,
-    marginVertical: 10,
-  },
-  addButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    width: "90%",
-    marginBottom: 20,
-  },
-  headerRow: {
-    flexDirection: "row",
-    backgroundColor: "#5cb85c",
-  },
-  headerCell: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    padding: 8,
-    textAlign: "center",
-    color: "white",
-    fontWeight: "bold",
-  },
-  headerCellWithDelete: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 5,
-    paddingVertical: 8,
-  },
-  headerText: {
-    color: "white",
-    fontWeight: "bold",
-  },
-  deleteButton: {
-    backgroundColor: "red",
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  deleteButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  dataRow: {
-    flexDirection: "row",
-  },
-  cell: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    padding: 8,
-    textAlign: "center",
-  },
-  cellInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    padding: 8,
-    textAlign: "center",
-    backgroundColor: "#fff",
-  },
-  button: {
-    width: "80%",
-    padding: 15,
-    marginVertical: 10,
-    borderRadius: 5,
-    alignItems: "center",
-  },
-  editButton: {
-    backgroundColor: "#f0ad4e",
-  },
-  settingsButton: {
-    backgroundColor: "#6c757d",
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
   },
 });

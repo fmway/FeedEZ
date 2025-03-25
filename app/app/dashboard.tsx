@@ -1,58 +1,35 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  View, 
-  Alert, 
-  TouchableOpacity, 
-  StyleSheet, 
-  SafeAreaView, 
-  Animated 
+import {
+  View,
+  Alert,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+  Animated,
+  Easing,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { MyText } from '@/components/MyText';
+import { useWebSocket } from './_layout';
 
 export default function DashboardScreen() {
-  const [dateInfo, setDateInfo] = useState('');
   const [feedTime, setFeedTime] = useState('00:00');
   const [speedLevel, setSpeedLevel] = useState('Level 1');
-  // Jadwal pakan: array of { hour, minute }
   const [schedules, setSchedules] = useState<{ hour: number; minute: number }[]>([]);
-  // Durasi pemberian pakan (detik)
   const [duration, setDuration] = useState(0);
-  // Indikator apakah pakan sedang berjalan (LED)
-  const [isFeedingActive, setIsFeedingActive] = useState(false);
-  // Simulasi status alat pakan
-  const [deviceOnline, setDeviceOnline] = useState(true);
+  // State untuk countdown (sisa waktu dalam detik)
+  const [remainingTime, setRemainingTime] = useState(0);
+  const { data, useCmd } = useWebSocket();
 
-  // Update tanggal dan waktu setiap detik
-  useEffect(() => {
-    const updateDateTime = () => {
-      const now = new Date();
-      const dayNames = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-      const monthNames = [
-        "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-      ];
-      const day = dayNames[now.getDay()];
-      const date = now.getDate();
-      const month = monthNames[now.getMonth()];
-      const year = now.getFullYear();
-      const hoursStr = now.getHours().toString().padStart(2, '0');
-      const minutesStr = now.getMinutes().toString().padStart(2, '0');
-      const secondsStr = now.getSeconds().toString().padStart(2, '0');
-      setDateInfo(`${day}, ${date} ${month} ${year}\n${hoursStr}:${minutesStr}:${secondsStr}`);
-    };
+  // Animated values untuk ripple, background color, dan status teks
+  const rippleAnim = useRef(new Animated.Value(0)).current;
+  const bgColorAnim = useRef(new Animated.Value(0)).current;
+  const statusAnim = useRef(new Animated.Value(0)).current; // 0: tampilkan feedTime; 1: tampilkan "Pakan Sedang Diberikan"
 
-    const intervalId = setInterval(updateDateTime, 1000);
-    updateDateTime();
-    return () => clearInterval(intervalId);
-  }, []);
-
-  // Ambil data dari endpoint /settings
-  useEffect(() => {
+  const fetchData = () => {
     fetch("https://feedez.deno.dev/settings")
       .then(response => response.json())
       .then(data => {
-        // Data diharapkan: { schedules: [{ hour, minute }], speed: number, duration: number }
         if (data) {
           if (data.schedules) {
             setSchedules(data.schedules);
@@ -66,9 +43,30 @@ export default function DashboardScreen() {
         }
       })
       .catch(err => console.error("Error fetching settings:", err));
+  };
+
+  useEffect(() => {
+    fetchData();
+    useCmd((ws) => {
+      ws.send(JSON.stringify({ cmd: "getStatusRun" }));
+    });
   }, []);
 
-  // Hitung jadwal pakan selanjutnya
+  useEffect(() => {
+    if (Object.hasOwn(data, "cmd") && typeof data.cmd === 'string') {
+      if (data.cmd === "refresh") {
+        fetchData();
+      }
+    }
+    if (Object.hasOwn(data, "isOnline") && typeof data.isOnline === 'boolean') {
+      Animated.timing(statusAnim, {
+        toValue: data.isOnline ? 1 : 0,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [data]);
+
   useEffect(() => {
     const updateNextFeedTime = () => {
       if (schedules.length === 0) {
@@ -115,69 +113,145 @@ export default function DashboardScreen() {
     return () => clearInterval(intervalId);
   }, [schedules]);
 
-  // Cek status pakan setiap detik dan update indikator LED
+  // Countdown: jika pakan aktif, inisialisasi countdown dari duration dan update setiap detik
   useEffect(() => {
-    const checkFeedingStatus = () => {
-      if (!deviceOnline) {
-        setIsFeedingActive(false);
-        return;
+    let countdownTimer: NodeJS.Timeout | null = null;
+    if (data && Object.hasOwn(data, "isOnline") && data.isOnline) {
+      if (duration > 0) {
+        setRemainingTime(duration);
+        countdownTimer = setInterval(() => {
+          setRemainingTime(prev => {
+            if (prev <= 1) {
+              if (countdownTimer) clearInterval(countdownTimer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
       }
-      const now = new Date();
-      let feedingActive = false;
-      schedules.forEach(sch => {
-        const scheduledTime = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate(),
-          sch.hour,
-          sch.minute
-        );
-        const feedEndTime = new Date(scheduledTime.getTime() + duration * 1000);
-        if (now >= scheduledTime && now < feedEndTime) {
-          feedingActive = true;
-        }
-      });
-      setIsFeedingActive(feedingActive);
+    } else {
+      setRemainingTime(0);
+    }
+    return () => {
+      if (countdownTimer) clearInterval(countdownTimer);
     };
-
-    const intervalId = setInterval(checkFeedingStatus, 1000);
-    return () => clearInterval(intervalId);
-  }, [schedules, duration, deviceOnline]);
+  }, [data, duration]);
 
   const feedNow = () => {
-    Alert.alert('Info', 'Pakan diberikan sekarang!');
+    if (data && data.isOnline) {
+      useCmd((ws) => {
+        ws.send(JSON.stringify({ cmd: "stop" }));
+      });
+      Alert.alert('Info', 'Pakan dihentikan!');
+    } else {
+      Alert.alert('Info', 'Pakan diberikan sekarang!');
+      useCmd((ws) => {
+        ws.send(JSON.stringify({ cmd: "start" }));
+      });
+    }
+  };
+
+  // Animasi ripple & background color
+  useEffect(() => {
+    if (data && Object.hasOwn(data, "isOnline") && data.isOnline) {
+      Animated.parallel([
+        Animated.timing(rippleAnim, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(bgColorAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: false,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(rippleAnim, {
+          toValue: 0,
+          duration: 500,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(bgColorAnim, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: false,
+        }),
+      ]).start();
+    }
+  }, [data, rippleAnim, bgColorAnim]);
+
+  const cardBackgroundColor = bgColorAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['rgb(255, 222, 222)', 'rgb(220, 255, 209)'],
+  });
+
+  const rippleScale = rippleAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 4],
+  });
+  const rippleOpacity = rippleAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.5, 0],
+  });
+
+  // Format countdown ke format MM:SS
+  const formatCountdown = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
   };
 
   return (
     <SafeAreaView style={styles.safeContainer}>
-      {/* Header */}
-      <View style={styles.headerContainer}>
-        <MyText style={styles.logo}>FeedEZ</MyText>
-        <MyText style={styles.dateInfo}>{dateInfo}</MyText>
-      </View>
-      {/* Main Content Container */}
       <View style={styles.mainContent}>
-        <View style={styles.infoCard}>
-          {/* LED Indicator di pojok kanan atas card */}
+        <Animated.View style={[styles.infoCard, { backgroundColor: cardBackgroundColor }]}>
+          {/* Ripple effect di titik LED */}
+          <Animated.View
+            style={[
+              styles.ripple,
+              {
+                transform: [{ scale: rippleScale }],
+                opacity: rippleOpacity,
+              },
+            ]}
+          />
           <View style={styles.ledIndicatorContainer}>
             <View
               style={[
                 styles.ledIndicator,
-                { backgroundColor: isFeedingActive ? '#00FF00' : '#FF0000' },
+                { backgroundColor: data && data.isOnline ? '#00FF00' : '#FF0000' },
               ]}
             />
           </View>
-          <MyText style={styles.cardTitle}>Pakan Selanjutnya</MyText>
-          <MyText style={styles.feedTime}>{feedTime}</MyText>
+          {data && data.isOnline ? (
+            <View style={styles.statusContainer}>
+              <Animated.Text style={styles.statusText}>
+                Pakan Sedang Diberikan
+              </Animated.Text>
+              <MyText style={styles.countdownText}>
+                Berhenti dalam {formatCountdown(remainingTime)}
+              </MyText>
+            </View>
+          ) : (
+            <View style={styles.feedInfoContainer}>
+              <MyText style={styles.cardTitle}>Pakan Selanjutnya</MyText>
+              <MyText style={styles.feedTime}>{feedTime}</MyText>
+            </View>
+          )}
           <View style={styles.separator} />
           <MyText style={styles.cardTitle}>Speed</MyText>
           <MyText style={styles.speedText}>{speedLevel}</MyText>
           <TouchableOpacity style={[styles.button, styles.feedButton]} onPress={feedNow}>
-            <MyText style={styles.buttonText}>Jalankan Sekarang</MyText>
+            <MyText style={styles.buttonText}>
+              {data && data.isOnline ? "Berhenti" : "Jalankan Sekarang"}
+            </MyText>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       </View>
-      {/* Footer - Navigasi */}
       <View style={styles.footerContainer}>
         <Link href={"/schedule"} style={[styles.navButton, styles.scheduleButton]}>
           <MyText style={styles.buttonText}>Lihat Jadwal</MyText>
@@ -195,30 +269,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#e9f5e9',
   },
-  headerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    top: -25,
-    paddingBottom: 10,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-    zIndex: 10,
-  },
-  logo: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#5cb85c',
-  },
-  dateInfo: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    textAlign: 'right',
-  },
   mainContent: {
     flex: 1,
     alignItems: 'center',
@@ -235,13 +285,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     width: '100%',
     borderRadius: 16,
-    padding: 20,
+    paddingVertical: 30,
+    paddingHorizontal: 20,
     alignItems: 'center',
     position: 'relative',
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+  },
+  ripple: {
+    position: 'absolute',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#00FF00',
+    top: 10,
+    right: 10,
   },
   ledIndicatorContainer: {
     position: 'absolute',
@@ -253,16 +314,36 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
   },
+  feedInfoContainer: {
+    alignItems: 'center',
+  },
+  statusContainer: {
+    alignItems: 'center',
+  },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     color: '#333',
+    marginBottom: 5,
   },
   feedTime: {
-    fontSize: 56,
+    fontSize: 54,
     fontWeight: '700',
-    marginVertical: 10,
     color: '#d9534f',
+    textAlign: 'center',
+    marginVertical: 5,
+  },
+  statusText: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#5cb85c',
+    textAlign: 'center',
+    marginBottom: 5,
+  },
+  countdownText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgb(0, 0, 0)',
     textAlign: 'center',
   },
   speedText: {
@@ -279,17 +360,17 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
-    padding: 15,
-    marginVertical: 10,
+    paddingVertical: 15,
     borderRadius: 8,
     alignItems: 'center',
+    marginVertical: 10,
   },
   feedButton: {
     backgroundColor: '#d9534f',
   },
   navButton: {
     width: '40%',
-    padding: 12,
+    paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
   },

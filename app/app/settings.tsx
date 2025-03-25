@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  Alert,
   StyleSheet,
   Modal,
   Button,
+  ScrollView,
+  TextInput,
+  Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
+import { MyText } from '@/components/MyText';
 import { Setting } from '@/constants/model';
 
 export default function SettingsScreen() {
@@ -24,6 +27,10 @@ export default function SettingsScreen() {
   // State untuk custom duration picker
   const [selectedMinutes, setSelectedMinutes] = useState<number>(Math.floor(duration / 60));
   const [selectedSeconds, setSelectedSeconds] = useState<number>(duration % 60);
+
+  // State untuk feedback saat saving
+  const [saving, setSaving] = useState(false);
+  const progressAnim = useRef(new Animated.Value(0)).current; // nilai dari 0 sampai 1
 
   useEffect(() => {
     fetch("https://feedez.deno.dev/settings")
@@ -68,12 +75,18 @@ export default function SettingsScreen() {
     hidePicker();
   };
 
+  // Feedback saving menggunakan progress bar animasi
   const saveSettings = () => {
-    Alert.alert(
-      'Info',
-      `Pengaturan disimpan!\nKecepatan pelontar: Level ${currentSpeed}\nDurasi pemberian pakan: ${formatTime(duration)}`
-    );
-    onSubmit();
+    setSaving(true);
+    Animated.timing(progressAnim, {
+      toValue: 1,
+      duration: 2000,
+      useNativeDriver: false,
+    }).start(() => {
+      onSubmit();
+      setSaving(false);
+      progressAnim.setValue(0);
+    });
   };
 
   const onSubmit = async () => {
@@ -92,46 +105,65 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Pengaturan Pelontar Pakan</Text>
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <View style={styles.card}>
+        <MyText style={styles.title}>Pengaturan Pelontar Pakan</MyText>
 
-      <Text style={styles.label}>Pilih kecepatan pelontar:</Text>
-      <View style={styles.speedContainer}>
-        <TouchableOpacity
-          style={styles.arrowButton}
-          onPress={() => setCurrentSpeed(Math.max(1, currentSpeed - 1))}
-        >
-          <Text style={styles.arrowButtonText}>◀</Text>
+        <MyText style={styles.label}>Pilih kecepatan pelontar:</MyText>
+        <View style={styles.speedContainer}>
+          <TouchableOpacity
+            style={styles.arrowButton}
+            onPress={() => setCurrentSpeed(Math.max(1, currentSpeed - 1))}
+          >
+            <Text style={styles.arrowButtonText}>◀</Text>
+          </TouchableOpacity>
+
+          <MyText style={styles.speedDisplay}>Level {currentSpeed}</MyText>
+
+          <TouchableOpacity
+            style={styles.arrowButton}
+            onPress={() => setCurrentSpeed(Math.min(5, currentSpeed + 1))}
+          >
+            <Text style={styles.arrowButtonText}>▶</Text>
+          </TouchableOpacity>
+        </View>
+
+        <MyText style={styles.label}>Durasi pemberian pakan (mm:ss):</MyText>
+        <TouchableOpacity style={styles.durationDisplay} onPress={showPicker}>
+          <MyText style={styles.durationText}>{formatTime(duration)}</MyText>
         </TouchableOpacity>
 
-        <Text style={styles.speedDisplay}>Level {currentSpeed}</Text>
-
-        <TouchableOpacity
-          style={styles.arrowButton}
-          onPress={() => setCurrentSpeed(Math.min(5, currentSpeed + 1))}
-        >
-          <Text style={styles.arrowButtonText}>▶</Text>
+        <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={saveSettings}>
+          <MyText style={styles.buttonText}>Simpan Pengaturan</MyText>
         </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.button, styles.backButton]} onPress={() => router.back()}>
+          <MyText style={styles.buttonText}>Kembali</MyText>
+        </TouchableOpacity>
+
+        {/* Progress Bar Feedback */}
+        {saving && (
+          <View style={styles.progressContainer}>
+            <Animated.View
+              style={[
+                styles.progressBar,
+                {
+                  width: progressAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0%', '100%'],
+                  }),
+                },
+              ]}
+            />
+          </View>
+        )}
       </View>
-
-      <Text style={styles.label}>Durasi pemberian pakan (mm:ss):</Text>
-      <TouchableOpacity style={styles.durationDisplay} onPress={showPicker}>
-        <Text style={styles.durationText}>{formatTime(duration)}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={[styles.button, styles.settingsButton]} onPress={saveSettings}>
-        <Text style={styles.buttonText}>Simpan Pengaturan</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={[styles.button, styles.settingsButton]} onPress={() => router.back()}>
-        <Text style={styles.buttonText}>Kembali</Text>
-      </TouchableOpacity>
 
       {/* Modal kustom untuk memilih durasi */}
       <Modal transparent visible={isPickerVisible} animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Pilih Durasi (mm:ss)</Text>
+            <MyText style={styles.modalTitle}>Pilih Durasi (mm:ss)</MyText>
             <View style={styles.pickerContainer}>
               <Picker
                 selectedValue={selectedMinutes}
@@ -142,7 +174,7 @@ export default function SettingsScreen() {
                   <Picker.Item key={num} label={num.toString()} value={num} />
                 ))}
               </Picker>
-              <Text style={styles.separator}>:</Text>
+              <MyText style={styles.separator}>:</MyText>
               <Picker
                 selectedValue={selectedSeconds}
                 style={styles.picker}
@@ -162,22 +194,102 @@ export default function SettingsScreen() {
       </Modal>
 
       {/* Modal Loading dengan Efek Mengetik */}
-      <Modal transparent visible={loading}>
+      <Modal transparent visible={loading} animationType="fade">
         <View style={styles.overlay}>
-          <Text style={styles.overlayText}>{loadingText}</Text>
+          <MyText style={styles.overlayText}>{loadingText}</MyText>
         </View>
       </Modal>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  scrollContainer: {
+    flexGrow: 1,
     backgroundColor: '#e9f5e9',
-    alignItems: 'center',
-    justifyContent: 'center',
     padding: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  card: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#5cb85c',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  label: {
+    fontSize: 16,
+    color: '#333',
+    marginTop: 10,
+  },
+  speedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    marginVertical: 20,
+    width: '100%',
+  },
+  arrowButton: {
+    backgroundColor: '#f0ad4e',
+    padding: 12,
+    borderRadius: 30,
+    width: 50,
+    alignItems: 'center',
+  },
+  arrowButtonText: {
+    fontSize: 24,
+    color: '#fff',
+  },
+  speedDisplay: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#555',
+  },
+  durationDisplay: {
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#f7f7f7',
+    marginVertical: 20,
+    alignItems: 'center',
+  },
+  durationText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#d9534f',
+  },
+  button: {
+    width: '100%',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  saveButton: {
+    backgroundColor: '#5cb85c',
+  },
+  backButton: {
+    backgroundColor: '#6c757d',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   modalOverlay: {
     flex: 1,
@@ -189,13 +301,14 @@ const styles = StyleSheet.create({
     width: '80%',
     backgroundColor: '#fff',
     padding: 20,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
-    marginBottom: 10,
+    marginBottom: 15,
+    color: '#333',
   },
   pickerContainer: {
     flexDirection: 'row',
@@ -209,6 +322,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     paddingHorizontal: 10,
+    color: '#333',
   },
   modalButtons: {
     flexDirection: 'row',
@@ -227,59 +341,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
-  title: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginVertical: 10,
-    textAlign: 'center',
+  progressContainer: {
+    marginTop: 20,
+    width: '100%',
+    height: 8,
+    backgroundColor: '#eee',
+    borderRadius: 4,
+    overflow: 'hidden',
   },
-  label: {
-    fontSize: 16,
-    marginTop: 10,
-  },
-  speedContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  arrowButton: {
-    backgroundColor: 'orange',
-    padding: 10,
-    borderRadius: 25,
-    marginHorizontal: 20,
-  },
-  arrowButtonText: {
-    fontSize: 24,
-    color: '#fff',
-  },
-  speedDisplay: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  durationDisplay: {
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5,
-    marginVertical: 20,
-    backgroundColor: '#f0f0f0',
-  },
-  durationText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  button: {
-    width: '80%',
-    padding: 15,
-    marginVertical: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  settingsButton: {
-    backgroundColor: '#6c757d',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#5cb85c',
   },
 });
