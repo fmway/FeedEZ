@@ -33,6 +33,7 @@ jobs:
         root: "./backend" # 📝 Update the root if necessary
   
   build-apk:
+    permissions: write-all
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     defaults:
@@ -68,17 +69,20 @@ jobs:
       run: eas build --platform android --non-interactive
 
     - name: Get APK
+      id: get_apk
       env:
         VERSION: ${{ github.ref_name }}
       run: |
         link_apk=$(eas build:list --profile production --json --non-interactive 2>/dev/null | jq '.[0].artifacts.applicationArchiveUrl' -r)
-        echo ${link_apk}
         mkdir releases
-        wget -c "${link_apk}" -O "releases/feedez-${VERSION}.apk"
+        out_apk="$PWD/releases/feedez-${VERSION}.apk"
+        echo "${link_apk} => ${out_apk}"
+        wget -c "${link_apk}" -O "${out_apk}"
+        echo "OUT_APK=${out_apk}" >> "$GITHUB_OUTPUT"
 
     - name: Upload binaries to release
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: app/releases/feedez-${{ github.ref_name }}.apk
+        file: ${{ steps.get_apk.outputs.OUT_APK }}
         overwrite: true
