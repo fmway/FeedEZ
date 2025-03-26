@@ -34,6 +34,7 @@ app
   })
   .post('/settings', async (c) => {
     const body = await c.req.json() as Partial<Setting>;
+    console.log(body);
     if (body.duration) {
       setting.duration = body.duration;
       devices.forEach(x => x.send("SET_DURATION, " + body.duration));
