@@ -37,3 +37,6 @@
 
 # direnv
 **/.direnv
+.env
+.env.*
+!.env.*.example

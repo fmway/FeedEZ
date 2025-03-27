@@ -1,6 +1,7 @@
 import { serveStatic, upgradeWebSocket } from 'hono/deno'
 import { Hono } from 'hono'
 import type { WSContext } from 'hono/ws'
+import { getDuration, getFull, getSchedules, getSpeed, setDuration, setSchedules, setSpeed } from "./db/actions.ts";
 
 const app = new Hono()
 interface Schedule {
@@ -16,38 +17,42 @@ let isOnline = false;
 
 const clients: WSContext<WebSocket>[] = [];
 const devices: WSContext<WebSocket>[] = [];
-const setting: Setting = {
-  duration: 360,
-  speed: 5,
-  schedules: [
-    { hour: 8, minute: 40 },
-    { hour: 13, minute: 0 },
-    { hour: 15, minute: 0 },
-  ]
-};
-const idleTimeout = 3;
+//const setting: Setting = {
+//  duration: 360,
+//  speed: 5,
+//  schedules: [
+//    { hour: 8, minute: 40 },
+//    { hour: 13, minute: 0 },
+//    { hour: 15, minute: 0 },
+//  ]
+//};
+//const idleTimeout = 3;
 
 app
   .use('/public/*', serveStatic({ path: './public' }))
   .get('/settings', (c) => {
-    return c.json(setting);
+    //return c.json(setting);
+    return c.json(getFull());
   })
   .post('/settings', async (c) => {
     const body = await c.req.json() as Partial<Setting>;
     console.log(body);
     if (body.duration) {
-      setting.duration = body.duration;
+      //setting.duration = body.duration;
+      await setDuration(body.duration);
       devices.forEach(x => x.send("SET_DURATION, " + body.duration));
     }
     if (body.schedules) {
-      setting.schedules.splice(0, setting.schedules.length);
-      setting.schedules.push(...body.schedules);
-      const txt = ["SET_FEEDING", ...setting.schedules.map(x => [ x.hour, x.minute ])].flat().join(", ");
+      //setting.schedules.splice(0, setting.schedules.length);
+      //setting.schedules.push(...body.schedules);
+      await setSchedules(body.schedules);
+      const txt = ["SET_FEEDING", ...body.schedules.map(x => [ x.hour, x.minute ])].flat().join(", ");
       console.log(txt);
       devices.forEach(x => x.send(txt));
     }
     if (body.speed) {
-      setting.speed = body.speed;
+      //setting.speed = body.speed;
+      await setSpeed(body.speed);
       devices.forEach(x => x.send("SET_SPEED, " + body.speed));
     }
     clients.forEach(x => x.send(JSON.stringify({ cmd: "refresh" })));
@@ -86,21 +91,24 @@ app
   })
   .get('/ws/device', (c, next) => {
     return upgradeWebSocket(() => ({
-      onOpen(e, ws) {
+      async onOpen(e, ws) {
         //setTimeout(() => {
         devices.push(ws);
         console.log("Connected devices: ", devices.length);
-        const txt = ["SET_FEEDING", ...setting.schedules.map(x => [ x.hour, x.minute ])].flat().join(", ");
-        ws.send("SET_SPEED, " + setting.speed)
+        const speed = await getSpeed();
+        const schedules = await getSchedules();
+        const duration = await getDuration();
+        const txt = ["SET_FEEDING", ...schedules.map(x => [ x.hour, x.minute ])].flat().join(", ");
+        ws.send("SET_SPEED, " + speed)
         ws.send(txt);
-        ws.send("SET_DURATION, " + setting.duration)
+        ws.send("SET_DURATION, " + duration)
         //}, idleTimeout * 1000 + 100)
       },
       onClose(e, ws) {
         devices.splice(devices.indexOf(ws), 1);
         console.log("Connected devices: ", devices.length);
       },
-      onMessage(e, ws) {
+      async onMessage(e, ws) {
         console.log("data from devices: ", e.data.toString());
         const splitted = e.data.toString().split(",").map(x => x.toLowerCase().trim());
         console.log("splitted to: ", JSON.stringify(splitted));
@@ -112,12 +120,11 @@ app
             clients.forEach(x => x.send(JSON.stringify({ isOnline })));
             break;
           case "set_speed":
-            setting.speed = parseInt(splitted.at(0) || "1");
+            await setSpeed(parseInt(splitted.at(0) || "1"));
             clients.forEach(x => x.send(JSON.stringify({ cmd: "refresh" })));
             break;
           case "set_feeding": {
-            setting.schedules.splice(0, setting.schedules.length);
-            setting.schedules.push(...splitted.map(x => {
+            await setSchedules(splitted.map(x => {
               const y = x.split(":").map(x => x.trim());
               return {
                 hour: parseInt(y.at(0) || "0"),
