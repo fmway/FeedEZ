@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaView, StatusBar, StyleSheet, View } from 'react-native';
 import * as NavigationBar from 'expo-navigation-bar';
 import { MyText } from '@/components/MyText';
+import * as SecureStore from 'expo-secure-store';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -13,11 +14,13 @@ SplashScreen.preventAutoHideAsync();
 interface SocketContextProps {
   data: Record<string, unknown>,
   useCmd: (fn: (ws: WebSocket, data: SocketContextProps['data']) => void) => void,
+  token: string,
 }
 
 export const WebSocketContext = createContext<SocketContextProps>({
   data: {},
-  useCmd(fn) {}
+  useCmd(fn) {},
+  token: "xxx",
 });
 
 export const useWebSocket = () => useContext(WebSocketContext);
@@ -29,38 +32,60 @@ export default function RootLayout() {
   const [dateInfo, setDateInfo] = useState('');
   const [data, setData] = useState({} as Record<string, unknown>);
   const [ws, setWs] = useState<WebSocket>();
+  const [token, setToken] = useState("");
 
   const useCmd: SocketContextProps['useCmd'] = (fn) => {
     fn(ws!, data);
   }
 
+  useEffect(() => {
+    SecureStore.getItemAsync("token").then(token => {
+      if (token) {
+        setToken(token);
+        console.log("setToken: ", token);
+      } else {
+        fetch("https://feedez.deno.dev/token")
+          .then(req => req.json())
+          .then(data => {
+            if (Object.hasOwn(data, "token") && typeof data.token === 'string') {
+              setToken(data.token);
+              SecureStore.setItemAsync("token", data.token);
+              console.log("data token: ", data.token);
+            }
+          })
+      }
+    });
+  }, [])
+
   // Inisialisasi WebSocket di level layout
   useEffect(() => {
-    const ws = new WebSocket("ws://feedez.deno.dev/ws/client");
-    ws.onopen = () => {
-      console.log("WebSocket connection opened");
-    };
-    ws.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        // Misalnya, periksa properti isOnline
-        console.log(e.data)
-        setData(data);
-      } catch (err) {
-        console.error("Error parsing WebSocket data:", err);
-      }
-    };
-    ws.onerror = (e) => {
-      console.error("WebSocket error:", e);
-    };
-    ws.onclose = (e) => {
-      console.log("WebSocket connection closed:", e.code, e.reason);
-    };
-    setWs(ws);
-    return () => {
-      ws.close();
-    };
-  }, []);
+    if (!token) {
+      const ws = new WebSocket("wss://feedez.deno.dev/ws/client");
+      ws.onopen = () => {
+        console.log("WebSocket connection opened");
+      };
+      ws.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          // Misalnya, periksa properti isOnline
+          console.log(e.data)
+          setData(data);
+        } catch (err) {
+          console.error("Error parsing WebSocket data:", err);
+        }
+      };
+      ws.onerror = (e) => {
+        console.error("WebSocket error:", e);
+      };
+      ws.onclose = (e) => {
+        console.log("WebSocket connection closed:", e.code, e.reason);
+      };
+      setWs(ws);
+      return () => {
+        ws.close();
+      };
+    }
+  }, [token]);
 
   useEffect(() => {
     if (loaded) {
@@ -95,7 +120,7 @@ export default function RootLayout() {
   }
 
   return (
-    <WebSocketContext.Provider value={{ data, useCmd }}>
+    <WebSocketContext.Provider value={{ data, useCmd, token }}>
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle={'dark-content'} backgroundColor={'#fff'} />
         <View style={styles.headerContainer}>

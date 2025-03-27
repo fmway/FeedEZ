@@ -105,7 +105,7 @@ public:
   Display();
   Display(Page page);
   Page getPage();
-  void show(LiquidCrystal_I2C lcd, DateTime now, uint8_t speed, uint8_t hour, uint8_t minute);
+  void show(LiquidCrystal_I2C lcd, DateTime now, uint8_t speed);
   void setPage(Page page);
   void setPage(Menu::State state);
   void nextMenu();

@@ -106,9 +106,11 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
       data.trim();
       if (cmd.equals("SET_SPEED")) {
         this->setSpeed(data.toInt(), false);
+        Serial.println(this->data.speed);
       }
       if (cmd.equals("SET_DURATION")) {
         this->setDuration(data.toInt(), false);
+        Serial.println(this->longTime);
       }
       if (cmd.equals("SET_FEEDING")) {
         int i = 0;
@@ -135,7 +137,7 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
   }
 }
 
-void FeedEZ::setDuration(uint8_t duration, bool notification) {
+void FeedEZ::setDuration(unsigned long duration, bool notification) {
   this->longTime = duration;
   if (notification)
     Serial.println(String() + "SET_DURATION, " + duration);
@@ -174,7 +176,7 @@ void FeedEZ::init(uint8_t servo_pin) {
 }
 
 void FeedEZ::showDisplay() {
-  this->display.show(lcd, rtc.now(), this->el_kecepatan[this->data.speed - 1], this->data.feeding_times[0], this->data.feeding_times[1]);
+  this->display.show(lcd, rtc.now(), this->el_kecepatan[this->data.speed - 1]);
 }
 
 void FeedEZ::save() {

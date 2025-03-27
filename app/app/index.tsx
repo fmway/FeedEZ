@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   FlatList,
@@ -10,12 +10,24 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MyText } from '@/components/MyText';
+import { useWebSocket } from './_layout';
 
 export default function DeviceListScreen() {
   const router = useRouter();
   const [devices, setDevices] = useState<string[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [newDeviceId, setNewDeviceId] = useState('');
+  const { token } = useWebSocket();
+
+  useEffect(() => {
+    if (token !== "") {
+      devices.push("1234");
+    }
+  }, [token]);
+  
+  useEffect(() => {
+    console.log("token : ", token);
+  }, []);
 
   const addDevice = () => {
     if (!newDeviceId.trim()) {

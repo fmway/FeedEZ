@@ -8,23 +8,25 @@ import {
   Animated,
   Easing,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link } from 'expo-router';
 import { MyText } from '@/components/MyText';
 import { useWebSocket } from './_layout';
+
+const FEED_START_TIME_KEY = 'feedStartTime';
 
 export default function DashboardScreen() {
   const [feedTime, setFeedTime] = useState('00:00');
   const [speedLevel, setSpeedLevel] = useState('Level 1');
   const [schedules, setSchedules] = useState<{ hour: number; minute: number }[]>([]);
   const [duration, setDuration] = useState(0);
-  // State untuk countdown (sisa waktu dalam detik)
   const [remainingTime, setRemainingTime] = useState(0);
+  const [feedStartTime, setFeedStartTime] = useState<number | null>(null);
   const { data, useCmd } = useWebSocket();
 
-  // Animated values untuk ripple, background color, dan status teks
   const rippleAnim = useRef(new Animated.Value(0)).current;
   const bgColorAnim = useRef(new Animated.Value(0)).current;
-  const statusAnim = useRef(new Animated.Value(0)).current; // 0: tampilkan feedTime; 1: tampilkan "Pakan Sedang Diberikan"
+  const statusAnim = useRef(new Animated.Value(0)).current;
 
   const fetchData = () => {
     fetch("https://feedez.deno.dev/settings")
@@ -45,7 +47,19 @@ export default function DashboardScreen() {
       .catch(err => console.error("Error fetching settings:", err));
   };
 
+  // Ambil feedStartTime yang tersimpan saat mount
   useEffect(() => {
+    const loadFeedStartTime = async () => {
+      try {
+        const storedTime = await AsyncStorage.getItem(FEED_START_TIME_KEY);
+        if (storedTime) {
+          setFeedStartTime(Number(storedTime));
+        }
+      } catch (err) {
+        console.error("Error loading feed start time:", err);
+      }
+    };
+    loadFeedStartTime();
     fetchData();
     useCmd((ws) => {
       ws.send(JSON.stringify({ cmd: "getStatusRun" }));
@@ -53,12 +67,12 @@ export default function DashboardScreen() {
   }, []);
 
   useEffect(() => {
-    if (Object.hasOwn(data, "cmd") && typeof data.cmd === 'string') {
+    if (data && Object.hasOwn(data, "cmd") && typeof data.cmd === 'string') {
       if (data.cmd === "refresh") {
         fetchData();
       }
     }
-    if (Object.hasOwn(data, "isOnline") && typeof data.isOnline === 'boolean') {
+    if (data && Object.hasOwn(data, "isOnline") && typeof data.isOnline === 'boolean') {
       Animated.timing(statusAnim, {
         toValue: data.isOnline ? 1 : 0,
         duration: 500,
@@ -113,29 +127,45 @@ export default function DashboardScreen() {
     return () => clearInterval(intervalId);
   }, [schedules]);
 
-  // Countdown: jika pakan aktif, inisialisasi countdown dari duration dan update setiap detik
+  // Kelola feedStartTime dan penyimpanan secara persist
   useEffect(() => {
-    let countdownTimer: NodeJS.Timeout | null = null;
-    if (data && Object.hasOwn(data, "isOnline") && data.isOnline) {
-      if (duration > 0) {
-        setRemainingTime(duration);
-        countdownTimer = setInterval(() => {
-          setRemainingTime(prev => {
-            if (prev <= 1) {
-              if (countdownTimer) clearInterval(countdownTimer);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
+    if (data && data.isOnline) {
+      if (!feedStartTime) {
+        const now = Date.now();
+        setFeedStartTime(now);
+        AsyncStorage.setItem(FEED_START_TIME_KEY, now.toString()).catch(err =>
+          console.error("Error storing feed start time:", err)
+        );
       }
     } else {
+      // Jika pakan tidak aktif, hapus feedStartTime dari state dan storage
+      setFeedStartTime(null);
       setRemainingTime(0);
+      AsyncStorage.removeItem(FEED_START_TIME_KEY).catch(err =>
+        console.error("Error removing feed start time:", err)
+      );
+    }
+  }, [data]);
+
+  // Hitung countdown berdasarkan feedStartTime yang tersimpan
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (data && data.isOnline && feedStartTime) {
+      timer = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - feedStartTime) / 1000);
+        const timeLeft = duration - elapsed;
+        if (timeLeft <= 0) {
+          setRemainingTime(0);
+          clearInterval(timer!);
+        } else {
+          setRemainingTime(timeLeft);
+        }
+      }, 1000);
     }
     return () => {
-      if (countdownTimer) clearInterval(countdownTimer);
+      if (timer) clearInterval(timer);
     };
-  }, [data, duration]);
+  }, [data, feedStartTime, duration]);
 
   const feedNow = () => {
     if (data && data.isOnline) {
@@ -148,10 +178,15 @@ export default function DashboardScreen() {
       useCmd((ws) => {
         ws.send(JSON.stringify({ cmd: "start" }));
       });
+      // Set feedStartTime saat pakan dimulai
+      const now = Date.now();
+      setFeedStartTime(now);
+      AsyncStorage.setItem(FEED_START_TIME_KEY, now.toString()).catch(err =>
+        console.error("Error storing feed start time:", err)
+      );
     }
   };
 
-  // Animasi ripple & background color
   useEffect(() => {
     if (data && Object.hasOwn(data, "isOnline") && data.isOnline) {
       Animated.parallel([
@@ -198,7 +233,6 @@ export default function DashboardScreen() {
     outputRange: [0.5, 0],
   });
 
-  // Format countdown ke format MM:SS
   const formatCountdown = (seconds: number) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
     const s = (seconds % 60).toString().padStart(2, '0');
@@ -209,7 +243,6 @@ export default function DashboardScreen() {
     <SafeAreaView style={styles.safeContainer}>
       <View style={styles.mainContent}>
         <Animated.View style={[styles.infoCard, { backgroundColor: cardBackgroundColor }]}>
-          {/* Ripple effect di titik LED */}
           <Animated.View
             style={[
               styles.ripple,
