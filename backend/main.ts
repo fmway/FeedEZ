@@ -30,9 +30,9 @@ const devices: WSContext<WebSocket>[] = [];
 
 app
   .use('/public/*', serveStatic({ path: './public' }))
-  .get('/settings', (c) => {
+  .get('/settings', async (c) => {
     //return c.json(setting);
-    return c.json(getFull());
+    return c.json(await getFull());
   })
   .post('/settings', async (c) => {
     const body = await c.req.json() as Partial<Setting>;
