@@ -2,6 +2,9 @@ import { serveStatic, upgradeWebSocket } from 'hono/deno'
 import { Hono } from 'hono'
 import type { WSContext } from 'hono/ws'
 import { getDuration, getFull, getSchedules, getSpeed, setDuration, setSchedules, setSpeed } from "./db/actions.ts";
+import { sign, decode, verify } from "hono/jwt"
+
+const secretKey = Deno.env.get("SECRET_KEY")!;
 
 const app = new Hono()
 interface Schedule {
@@ -30,6 +33,18 @@ const devices: WSContext<WebSocket>[] = [];
 
 app
   .use('/public/*', serveStatic({ path: './public' }))
+  .get('/token', async (c) => {
+    const payload = {
+      sub: 'user',
+      role: 'admin',
+      exp: Math.floor(Date.now() / 1000) + 60 * 5, // Token expires in 5 minutes
+    };
+    const token = await sign(payload, secretKey);
+    return c.json({
+      message: "Successfully create token",
+      token
+    })
+  })
   .get('/settings', async (c) => {
     //return c.json(setting);
     return c.json(await getFull());
