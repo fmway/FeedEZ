@@ -3,6 +3,8 @@ import { Hono } from 'hono'
 import type { WSContext } from 'hono/ws'
 import { getDuration, getFull, getSchedules, getSpeed, setDuration, setSchedules, setSpeed } from "./db/actions.ts";
 import { sign, decode, verify } from "hono/jwt"
+import { boolean } from "drizzle-orm/gel-core";
+import { TZDate } from "npm:@date-fns/tz";
 
 const secretKey = Deno.env.get("SECRET_KEY")!;
 
@@ -17,6 +19,18 @@ interface Setting {
   schedules: Schedule[],
 }
 let isOnline = false;
+let tmpSchedule: Schedule | null = null;
+
+let filteredSchedule: (c: Schedule) => boolean = () => true;
+
+const parseSchedules = async () => {
+  const r = [
+    ...(await getSchedules()),
+    ...(tmpSchedule === null ? [] : [tmpSchedule]),
+  ].filter(filteredSchedule);
+  console.log(r);
+  return r;
+}
 
 const clients: WSContext<WebSocket>[] = [];
 const devices: WSContext<WebSocket>[] = [];
@@ -61,7 +75,7 @@ app
       //setting.schedules.splice(0, setting.schedules.length);
       //setting.schedules.push(...body.schedules);
       await setSchedules(body.schedules);
-      const txt = ["SET_FEEDING", ...body.schedules.map(x => [ x.hour, x.minute ])].flat().join(", ");
+      const txt = ["SET_FEEDING", ...(await parseSchedules()).map(x => [ x.hour, x.minute ])].flat().join(", ");
       console.log(txt);
       devices.forEach(x => x.send(txt));
     }
@@ -85,17 +99,42 @@ app
         clients.splice(clients.indexOf(ws), 1);
         console.log("Connected clients: ", clients.length);
       },
-      onMessage(e, ws) {
+      async onMessage(e, ws) {
         const data = JSON.parse(e.data.toString());
         console.log("data from clients: ", e.data.toString());
-        devices.forEach(x => {
+        devices.forEach(async x => {
           if (Object.hasOwn(data, "cmd") && typeof data.cmd === 'string') {
             switch (data.cmd) {
               case "getStatusRun":
                 x.send("GET_STATUS_RUN");
                 break;
-              default:
-                ;
+              case "start": {
+                console.log("Start")
+                const date = new TZDate(new Date(), "Asia/Jakarta");
+                date.setHours(date.getHours() + 7)
+                tmpSchedule = {
+                  hour: date.getHours(),
+                  minute: date.getMinutes(),
+                }
+                filteredSchedule = () => true;
+                x.send(["SET_FEEDING", ...(await parseSchedules()).map(x => [ x.hour, x.minute ])].flat().join(", "));
+                break;
+              }
+              case "stop": {
+                const date = getDateJakarta();
+                const time = date.getHours() * 3600 + date.getMinutes() * 60;
+                const duration = await getDuration() ?? 0;
+                filteredSchedule = c => {
+                  const t = c.hour * 3600 + c.minute * 60;
+                  const r = !( time >= t && time < t + duration );
+                  // if (!r) {
+                  //
+                  // }
+                  return r;
+                };
+                break;
+              }
+              default: ;
             }
           } else x.send(data);
         })
@@ -111,7 +150,7 @@ app
         devices.push(ws);
         console.log("Connected devices: ", devices.length);
         const speed = await getSpeed();
-        const schedules = await getSchedules();
+        const schedules = await parseSchedules();
         const duration = await getDuration();
         const txt = ["SET_FEEDING", ...schedules.map(x => [ x.hour, x.minute ])].flat().join(", ");
         ws.send("SET_SPEED, " + speed)

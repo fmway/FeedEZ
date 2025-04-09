@@ -2,6 +2,7 @@
   "version": "4",
   "specifiers": {
     "jsr:@hono/hono@^4.7.4": "4.7.5",
+    "npm:@date-fns/tz@*": "1.2.0",
     "npm:@libsql/client@~0.15.1": "0.15.1",
     "npm:@types/node@*": "22.12.0",
     "npm:drizzle-kit@*": "0.30.5_esbuild@0.19.12",
@@ -14,6 +15,9 @@
     }
   },
   "npm": {
+    "@date-fns/tz@1.2.0": {
+      "integrity": "sha512-LBrd7MiJZ9McsOgxqWX7AaxrDjcFVjWH/tIKJd7pnR7McaslGYOP1QmmiBXdJH/H/yLCT+rcQ7FaPBUxRGUtrg=="
+    },
     "@drizzle-team/brocli@0.10.2": {
       "integrity": "sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w=="
     },
