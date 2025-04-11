@@ -22,6 +22,7 @@ let isOnline = false;
 let tmpSchedule: Schedule | null = null;
 
 let filteredSchedule: (c: Schedule) => boolean = () => true;
+const actionToSchedule: ((hour: number, minute: number) => (void | Promise<void>))[] = [];
 
 const parseSchedules = async () => {
   const r = [
@@ -99,7 +100,7 @@ app
         clients.splice(clients.indexOf(ws), 1);
         console.log("Connected clients: ", clients.length);
       },
-      async onMessage(e, ws) {
+      onMessage(e, ws) {
         const data = JSON.parse(e.data.toString());
         console.log("data from clients: ", e.data.toString());
         devices.forEach(async x => {
@@ -110,28 +111,27 @@ app
                 break;
               case "start": {
                 console.log("Start")
-                const date = new TZDate(new Date(), "Asia/Jakarta");
-                date.setHours(date.getHours() + 7)
-                tmpSchedule = {
-                  hour: date.getHours(),
-                  minute: date.getMinutes(),
-                }
-                filteredSchedule = () => true;
-                x.send(["SET_FEEDING", ...(await parseSchedules()).map(x => [ x.hour, x.minute ])].flat().join(", "));
+                x.send("GET_TIME");
+                actionToSchedule.push(async (hour, minute) => {
+                  tmpSchedule = { hour, minute };
+                  filteredSchedule = () => true;
+                  x.send(["SET_FEEDING", ...(await parseSchedules()).map(x => [ x.hour, x.minute ])].flat().join(", "))
+                })
                 break;
               }
               case "stop": {
-                const date = getDateJakarta();
-                const time = date.getHours() * 3600 + date.getMinutes() * 60;
-                const duration = await getDuration() ?? 0;
-                filteredSchedule = c => {
-                  const t = c.hour * 3600 + c.minute * 60;
-                  const r = !( time >= t && time < t + duration );
-                  // if (!r) {
-                  //
-                  // }
-                  return r;
-                };
+                x.send("GET_TIME");
+                actionToSchedule.push(async (hour, minute) => {
+                  const duration = await getDuration();
+                  const time = hour * 3600 + minute * 60;
+                  filteredSchedule = c => {
+                    const t = c.hour * 3600 + c.minute * 60;
+                    const r = !( time >= t && time < t + duration!);
+                    return r;
+                  };
+                  x.send(["SET_FEEDING", ...(await parseSchedules()).map(x => [ x.hour, x.minute ])].flat().join(", "))
+                  filteredSchedule = () => true;
+                });
                 break;
               }
               default: ;
@@ -163,8 +163,18 @@ app
         console.log("Connected devices: ", devices.length);
       },
       async onMessage(e, ws) {
-        console.log("data from devices: ", e.data.toString());
-        const splitted = e.data.toString().split(",").map(x => x.toLowerCase().trim());
+        const data = e.data.toString();
+        console.log("data from devices: ", data);
+        const re = /^(?<hour>\d{1,2}):(?<minute>\d{1,2})$/;
+        if (data.length >= 3 && data.length <= 5 && re.test(data) && actionToSchedule.length > 0) {
+          const match = data.match(re);
+          const hour = parseInt(match!.groups!.hour)
+          const minute = parseInt(match!.groups!.minute);
+          const fn = actionToSchedule.shift();
+          fn!(hour, minute);
+          return;
+        }
+        const splitted = data.split(",").map(x => x.toLowerCase().trim());
         console.log("splitted to: ", JSON.stringify(splitted));
         const cmd = splitted.shift();
         console.log(JSON.stringify({ cmd, splitted }, null, 2));
