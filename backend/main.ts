@@ -20,6 +20,7 @@ interface Setting {
 }
 let isOnline = false;
 let tmpSchedule: Schedule | null = null;
+let timeout = 0;
 
 let filteredSchedule: (c: Schedule) => boolean = () => true;
 const actionToSchedule: ((hour: number, minute: number) => (void | Promise<void>))[] = [];
@@ -103,7 +104,7 @@ app
       onMessage(e, ws) {
         const data = JSON.parse(e.data.toString());
         console.log("data from clients: ", e.data.toString());
-        devices.forEach(async x => {
+        devices.forEach(x => {
           if (Object.hasOwn(data, "cmd") && typeof data.cmd === 'string') {
             switch (data.cmd) {
               case "getStatusRun":
@@ -179,10 +180,17 @@ app
         const cmd = splitted.shift();
         console.log(JSON.stringify({ cmd, splitted }, null, 2));
         switch (cmd) {
-          case "status_run":
+          case "status_run": {
             isOnline = JSON.parse(splitted.at(0) || "false");
-            clients.forEach(x => x.send(JSON.stringify({ isOnline })));
+            const data: { isOnline: boolean, timeout?: number } = { isOnline };
+            const t = splitted.at(1);
+            if (t && /^\d+$/.test(t)) {
+              timeout = parseInt(t);
+              data.timeout = timeout;
+            }
+            clients.forEach(x => x.send(JSON.stringify(data)));
             break;
+          }
           case "set_speed":
             await setSpeed(parseInt(splitted.at(0) || "1"));
             clients.forEach(x => x.send(JSON.stringify({ cmd: "refresh" })));

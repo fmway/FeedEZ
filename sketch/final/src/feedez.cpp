@@ -73,8 +73,9 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
     if (time < alarm_stop) {
       if (!this->isRun) {
         this->isRun = true;
-        Serial.println("STATUS_RUN, TRUE");
-        Serial.println("STATUS_RUN, TRUE");
+        auto data = String() + "STATUS_RUN, TRUE, " + (alarm_stop - time);
+        Serial.println(data);
+        Serial.println(data);
       }
       this->run();
       f();
@@ -97,7 +98,7 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
     data.trim();
 
     if (data.equals("GET_STATUS_RUN")) {
-      Serial.println(String() + "STATUS_RUN, " + (this->isRun ? "TRUE" : "FALSE"));
+      Serial.println(String() + "STATUS_RUN, " + (this->isRun ? (String() + "TRUE, " + (alarm_stop - time)) : "FALSE"));
     } else if (data.equals("GET_TIME")) {
       auto now = this->rtc.now();
       Serial.println(String() + now.hour() + ":" + now.minute());
