@@ -132,6 +132,7 @@ app
                   };
                   x.send(["SET_FEEDING", ...(await parseSchedules()).map(x => [ x.hour, x.minute ])].flat().join(", "))
                   filteredSchedule = () => true;
+                  tmpSchedule = null;
                 });
                 break;
               }
