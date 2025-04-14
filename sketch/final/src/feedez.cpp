@@ -36,12 +36,12 @@ void FeedEZ::setSpeed(uint8_t speed, bool notification) {
   this->data.speed = speed;
   this->display.setSpeed(speed);
   if (notification)
-    Serial.println(String() + "SET_SPEED, " + speed);
+    Serial.println(String() + F("SET_SPEED, ") + speed);
 }
 
 void FeedEZ::setFeedingTimes(uint8_t count, SmallTime feedingTimes[], bool notification) {
   this->data.count_feeding = count;
-  String txt = "SET_FEEDING";
+  String txt = F("SET_FEEDING");
   for (uint8_t i = 0; i < count; i++) {
     auto t = feedingTimes[i];
     this->data.feeding_times[i * 2] = t.hour;
@@ -73,7 +73,7 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
     if (time < alarm_stop) {
       if (!this->isRun) {
         this->isRun = true;
-        auto data = String() + "STATUS_RUN, TRUE, " + (alarm_stop - time);
+        auto data = String() + F("STATUS_RUN, TRUE, ") + (alarm_stop - time);
         Serial.println(data);
         Serial.println(data);
       }
@@ -81,14 +81,14 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
       f();
     } else if (this->isRun) {
       this->isRun = false;
-      Serial.println("STATUS_RUN, FALSE");
-      Serial.println("STATUS_RUN, FALSE");
+      Serial.println(F("STATUS_RUN, FALSE"));
+      Serial.println(F("STATUS_RUN, FALSE"));
     }
   } else {
     if (this->isRun) {
       this->isRun = false;
-      Serial.println("STATUS_RUN, FALSE");
-      Serial.println("STATUS_RUN, FALSE");
+      Serial.println(F("STATUS_RUN, FALSE"));
+      Serial.println(F("STATUS_RUN, FALSE"));
     }
     this->stop();
   }
@@ -98,7 +98,7 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
     data.trim();
 
     if (data.equals("GET_STATUS_RUN")) {
-      Serial.println(String() + "STATUS_RUN, " + (this->isRun ? (String() + "TRUE, " + (alarm_stop - time)) : "FALSE"));
+      Serial.println(String() + F("STATUS_RUN, ") + (this->isRun ? (String() + "TRUE, " + (alarm_stop - time)) : "FALSE"));
     } else if (data.equals("GET_TIME")) {
       auto now = this->rtc.now();
       Serial.println(String() + now.hour() + ":" + now.minute());
@@ -144,7 +144,7 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
 void FeedEZ::setDuration(unsigned long duration, bool notification) {
   this->longTime = duration;
   if (notification)
-    Serial.println(String() + "SET_DURATION, " + duration);
+    Serial.println(String() + F("SET_DURATION, ") + duration);
 }
 
 void FeedEZ::run() {
@@ -153,14 +153,14 @@ void FeedEZ::run() {
   if (this->statePrev == 0 || millis() - this->statePrev >= this->intervalAlarm[int(this->isOpen)]) {
     this->statePrev = millis();
     this->isOpen = !this->isOpen;
-    servo.write(this->isOpen ? 45 : 12);
+    servo.write(this->isOpen ? 45 : 13);
   }
 }
 
 void FeedEZ::stop() {
   this->isOpen = false;
   this->statePrev = 0;
-  servo.write(12);
+  servo.write(13);
   din(0);
 }
 
@@ -168,7 +168,7 @@ void FeedEZ::init(uint8_t servo_pin) {
   Serial.begin(9600);
   while (!Serial) {}
   servo.attach(servo_pin);
-  servo.write(12);
+  servo.write(13);
   rtc.begin();
   lcd.init();
   lcd.init();

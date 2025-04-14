@@ -103,7 +103,7 @@ app
       },
       onMessage(e, ws) {
         const data = JSON.parse(e.data.toString());
-        console.log("data from clients: ", e.data.toString());
+        console.log("data from clients: ", e.data.toString(), ", device length: ", devices.length);
         devices.forEach(x => {
           if (Object.hasOwn(data, "cmd") && typeof data.cmd === 'string') {
             switch (data.cmd) {
