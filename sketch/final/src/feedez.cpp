@@ -153,14 +153,14 @@ void FeedEZ::run() {
   if (this->statePrev == 0 || millis() - this->statePrev >= this->intervalAlarm[int(this->isOpen)]) {
     this->statePrev = millis();
     this->isOpen = !this->isOpen;
-    servo.write(this->isOpen ? 45 : 0);
+    servo.write(this->isOpen ? 45 : 12);
   }
 }
 
 void FeedEZ::stop() {
   this->isOpen = false;
   this->statePrev = 0;
-  servo.write(0);
+  servo.write(12);
   din(0);
 }
 
@@ -168,7 +168,7 @@ void FeedEZ::init(uint8_t servo_pin) {
   Serial.begin(9600);
   while (!Serial) {}
   servo.attach(servo_pin);
-  servo.write(0);
+  servo.write(12);
   rtc.begin();
   lcd.init();
   lcd.init();
