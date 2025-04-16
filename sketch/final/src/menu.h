@@ -1,16 +1,9 @@
 // Just for completion
 #include "Function.h"
 #include "Vector.h"
-#include <stdint.h>
-#ifndef ARDUINO
-#define ARDUINO 1000
-#define ARDUINO_ARCH_AVR
-#endif // !ARDUINO
-
 #ifndef _MY_MENU_H
 #define _MY_MENU_H
 
-#include <Arduino.h>
 #include "LiquidCrystal_I2C.h"
 #include "RTClib.h"
 #include "mytime.h"

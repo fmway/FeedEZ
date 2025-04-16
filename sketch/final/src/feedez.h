@@ -1,11 +1,5 @@
-// Just for completion
 #include "Function.h"
 #include "button.h"
-#ifndef ARDUINO
-#define ARDUINO 1000
-#define ARDUINO_ARCH_AVR
-#endif // !ARDUINO
-
 #ifndef _FEED_EZ_H
 #define _FEED_EZ_H
 
@@ -15,8 +9,6 @@
 #include "LiquidCrystal_I2C.h"
 #include "dinamo.h"
 #include "Servo.h"
-#include<Arduino.h>
-#include <stdint.h>
 
 class FeedEZ {
 public:
