@@ -11,6 +11,7 @@
     fmway-nix.inputs.flake-parts.follows = "flake-parts";
     fmway-nix.inputs.nixpkgs.follows = "nixpkgs";
     arduino-nix.url = "github:fmway/arduino-nix";
+    arduino-nix.inputs.arduino-index.follows = "arduino-index";
     devenv-root = {
       url = "file+file:///dev/null";
       flake = false;

@@ -19,6 +19,10 @@ in {
     ];
     packages = [
       arduino
+      pkgs.arduino.pkgs.platforms.esp8266.esp8266.latest
+    ];
+    packageIndex = [
+      "${inputs.arduino-index}/index/package_esp8266com_index.json"
     ];
   };
 
@@ -63,11 +67,6 @@ in {
         (lib.concatStringsSep "\n  ")
       ]}
   '';
-
-  nixd.paths = [
-    "devenv (${name})=${flake.outPath}#devShells.${system}.${name}.options"
-    "pkgs=${flake.outPath}#devShells.${system}.${name}.pkgs"
-  ];
 
   nixpkgs.overlays = [
     (self: super: {

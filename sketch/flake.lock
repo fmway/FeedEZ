@@ -3,27 +3,11 @@
     "arduino-index": {
       "flake": false,
       "locked": {
-        "lastModified": 1744675293,
-        "narHash": "sha256-+OXtGmxsCoVjfILSKQEROlyQLc9bdvhHBsFPGn0Dw2Q=",
+        "lastModified": 1744848095,
+        "narHash": "sha256-kJm6iJpHe7KnRaeKPtVVJt9MJPYuZyad40cMGuvy6/U=",
         "owner": "bouk",
         "repo": "arduino-indexes",
-        "rev": "49d9903013afec2cd82eb3d502115452dbd5dba3",
-        "type": "github"
-      },
-      "original": {
-        "owner": "bouk",
-        "repo": "arduino-indexes",
-        "type": "github"
-      }
-    },
-    "arduino-index_2": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1744675293,
-        "narHash": "sha256-+OXtGmxsCoVjfILSKQEROlyQLc9bdvhHBsFPGn0Dw2Q=",
-        "owner": "bouk",
-        "repo": "arduino-indexes",
-        "rev": "49d9903013afec2cd82eb3d502115452dbd5dba3",
+        "rev": "1ca3cdf61c6ced72780f6f1ab082c94bbce62ab6",
         "type": "github"
       },
       "original": {
@@ -34,14 +18,16 @@
     },
     "arduino-nix": {
       "inputs": {
-        "arduino-index": "arduino-index_2"
+        "arduino-index": [
+          "arduino-index"
+        ]
       },
       "locked": {
-        "lastModified": 1742172257,
-        "narHash": "sha256-9zf7O4ZTM7hH6N5Ix4oNTWbzpzK7O+sYSyRVo/K+DEU=",
+        "lastModified": 1744859187,
+        "narHash": "sha256-6Marq6B/S4WQLu0XULca8rwh1Jz4xJjkfkUEthj7Noc=",
         "owner": "fmway",
         "repo": "arduino-nix",
-        "rev": "742c1d8f9964ac0f41ba97aee83c933e2700ef90",
+        "rev": "3ae255d598164515954975e4d337aee2ef63a24c",
         "type": "github"
       },
       "original": {
@@ -89,11 +75,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1744707193,
-        "narHash": "sha256-2Q1cIoDZtadM+yZgWUTXt9nIcFHsXmZgDCBMmnbqEWo=",
+        "lastModified": 1744851036,
+        "narHash": "sha256-8MTBj2REB8t29sIBLpxbR0+AEGJ7f+RkzZPAGsFd40c=",
         "owner": "fmway",
         "repo": "devenv",
-        "rev": "b3eb2312f2e09c5362ba8f5861befa6f966e5440",
+        "rev": "e325c838e037a99b8ac0d393e088f66b84b2e889",
         "type": "github"
       },
       "original": {
@@ -197,11 +183,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1744717030,
-        "narHash": "sha256-UGBvLiLXa/1yQpZLhAf2c+4q4lpHgqQUin2r3OrDsHk=",
+        "lastModified": 1744809900,
+        "narHash": "sha256-PezDSBgOoBYrxxKHmU91ED7AVK4FxukCjOWnIYfTUGY=",
         "owner": "fmway",
         "repo": "fmway.nix",
-        "rev": "1c8d3a680d51bdc70d6970d2204a68a44145ea28",
+        "rev": "cbc007fe672f5e29d486252374d086807555c2c1",
         "type": "github"
       },
       "original": {

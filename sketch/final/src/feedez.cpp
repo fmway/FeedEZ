@@ -10,27 +10,14 @@ void din(uint8_t speed) {
 }
 
 FeedEZ::FeedEZ() {
-  this->load();
+  // this->load();
   this->display.on_save([this] (uint8_t speed, uint8_t count, SmallTime * feedingTimes) {
     this->setSpeed(speed);
     if (count > 0)
       this->setFeedingTimes(count, feedingTimes);
-    this->save();
+    // this->save();
   });
 }
-
-/*FeedEZ::FeedEZ(uint8_t speed) {*/
-/*  this->setSpeed(speed);*/
-/*}*/
-/**/
-/*FeedEZ::FeedEZ(uint8_t count_feeding, const MyTime feedingTimes[]) {*/
-/*  this->setFeedingTimes(count_feeding, feedingTimes);*/
-/*}*/
-/**/
-/*FeedEZ::FeedEZ(uint8_t speed, uint8_t count_feeding, const MyTime feedingTimes[]) {*/
-/*  *this = FeedEZ(speed);*/
-/*  this->setFeedingTimes(count_feeding, feedingTimes);*/
-/*}*/
 
 void FeedEZ::setSpeed(uint8_t speed, bool notification) {
   this->data.speed = speed;
