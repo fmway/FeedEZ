@@ -23,11 +23,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1744859187,
-        "narHash": "sha256-6Marq6B/S4WQLu0XULca8rwh1Jz4xJjkfkUEthj7Noc=",
+        "lastModified": 1744955665,
+        "narHash": "sha256-J+NtCSJkEZTp1U+lJ/qTrYx/ndecE86Ck+XlJd5KV7E=",
         "owner": "fmway",
         "repo": "arduino-nix",
-        "rev": "3ae255d598164515954975e4d337aee2ef63a24c",
+        "rev": "e6a6f7d27a9da15947f6ab4e5dc31929aaaf0d0b",
         "type": "github"
       },
       "original": {
@@ -75,15 +75,15 @@
         ]
       },
       "locked": {
-        "lastModified": 1744851036,
+        "lastModified": 1744876578,
         "narHash": "sha256-8MTBj2REB8t29sIBLpxbR0+AEGJ7f+RkzZPAGsFd40c=",
-        "owner": "fmway",
+        "owner": "cachix",
         "repo": "devenv",
-        "rev": "e325c838e037a99b8ac0d393e088f66b84b2e889",
+        "rev": "7ff7c351bba20d0615be25ecdcbcf79b57b85fe1",
         "type": "github"
       },
       "original": {
-        "owner": "fmway",
+        "owner": "cachix",
         "repo": "devenv",
         "type": "github"
       }
@@ -183,11 +183,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1744809900,
-        "narHash": "sha256-PezDSBgOoBYrxxKHmU91ED7AVK4FxukCjOWnIYfTUGY=",
+        "lastModified": 1744959419,
+        "narHash": "sha256-PURwEiW37eaiQx6WyOIA1hvfCPTezCoNl1kUNM/Q9i0=",
         "owner": "fmway",
         "repo": "fmway.nix",
-        "rev": "cbc007fe672f5e29d486252374d086807555c2c1",
+        "rev": "361bdbb41b62041a819b7ebef9946a5c45346b0b",
         "type": "github"
       },
       "original": {

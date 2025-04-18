@@ -5,7 +5,7 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:cachix/devenv-nixpkgs/rolling";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    devenv.url = "github:fmway/devenv";
+    devenv.url = "github:cachix/devenv";
     devenv.inputs.nixpkgs.follows = "nixpkgs";
     fmway-nix.url = "github:fmway/fmway.nix";
     fmway-nix.inputs.flake-parts.follows = "flake-parts";
