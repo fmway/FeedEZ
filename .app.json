@@ -47,6 +47,12 @@
         "projectId": "649d14f1-77e2-48f9-83e8-95d13cd766f8"
       }
     },
-    "owner": "namaku1801"
+    "owner": "namaku1801",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/649d14f1-77e2-48f9-83e8-95d13cd766f8"
+    }
   }
 }

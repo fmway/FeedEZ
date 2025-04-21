@@ -44,7 +44,8 @@
     "expo-navigation-bar": "~4.0.8",
     "@react-native-picker/picker": "2.9.0",
     "@react-native-async-storage/async-storage": "1.23.1",
-    "expo-secure-store": "~14.0.1"
+    "expo-secure-store": "~14.0.1",
+    "expo-updates": "~0.27.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
