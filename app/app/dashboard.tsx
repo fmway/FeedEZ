@@ -127,38 +127,18 @@ export default function DashboardScreen() {
     return () => clearInterval(intervalId);
   }, [schedules]);
 
-  // Kelola feedStartTime dan penyimpanan secara persist
-  useEffect(() => {
-    if (data && data.isOnline) {
-      if (!feedStartTime) {
-        const now = Date.now();
-        setFeedStartTime(now);
-        AsyncStorage.setItem(FEED_START_TIME_KEY, now.toString()).catch(err =>
-          console.error("Error storing feed start time:", err)
-        );
-      }
-    } else {
-      // Jika pakan tidak aktif, hapus feedStartTime dari state dan storage
-      setFeedStartTime(null);
-      setRemainingTime(0);
-      AsyncStorage.removeItem(FEED_START_TIME_KEY).catch(err =>
-        console.error("Error removing feed start time:", err)
-      );
-    }
-  }, [data]);
-
   // Hitung countdown berdasarkan feedStartTime yang tersimpan
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
-    if (data && data.isOnline && feedStartTime) {
+    if (data && data.isOnline) {
+      let timeout = data.timeout! as number;
       timer = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - feedStartTime) / 1000);
-        const timeLeft = duration - elapsed;
-        if (timeLeft <= 0) {
+        if (timeout <= 0) {
           setRemainingTime(0);
           clearInterval(timer!);
         } else {
-          setRemainingTime(timeLeft);
+          setRemainingTime(timeout);
+          timeout--;
         }
       }, 1000);
     }
@@ -260,21 +240,15 @@ export default function DashboardScreen() {
               ]}
             />
           </View>
-          {data && data.isOnline ? (
-            <View style={styles.statusContainer}>
-              <Animated.Text style={styles.statusText}>
-                Pakan Sedang Diberikan
-              </Animated.Text>
-              <MyText style={styles.countdownText}>
-                Berhenti dalam {formatCountdown(remainingTime)}
-              </MyText>
-            </View>
-          ) : (
-            <View style={styles.feedInfoContainer}>
-              <MyText style={styles.cardTitle}>Pakan Selanjutnya</MyText>
-              <MyText style={styles.feedTime}>{feedTime}</MyText>
-            </View>
-          )}
+          <View style={styles.feedInfoContainer}>
+  <MyText style={styles.cardTitle}>
+    {data && data.isOnline ? "Pakan Sedang Diberikan" : "Pakan Selanjutnya"}
+  </MyText>
+  <MyText style={styles.feedTime}>
+    {data && data.isOnline ? formatCountdown(remainingTime) : feedTime}
+  </MyText>
+</View>
+
           <View style={styles.separator} />
           <MyText style={styles.cardTitle}>Speed</MyText>
           <MyText style={styles.speedText}>{speedLevel}</MyText>
