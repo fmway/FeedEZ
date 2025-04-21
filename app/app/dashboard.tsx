@@ -152,9 +152,9 @@ export default function DashboardScreen() {
       useCmd((ws) => {
         ws.send(JSON.stringify({ cmd: "stop" }));
       });
-      Alert.alert('Info', 'Pakan dihentikan!');
+      // Alert.alert('Info', 'Pakan dihentikan!');
     } else {
-      Alert.alert('Info', 'Pakan diberikan sekarang!');
+      // Alert.alert('Info', 'Pakan diberikan sekarang!');
       useCmd((ws) => {
         ws.send(JSON.stringify({ cmd: "start" }));
       });
@@ -245,7 +245,7 @@ export default function DashboardScreen() {
     {data && data.isOnline ? "Pakan Sedang Diberikan" : "Pakan Selanjutnya"}
   </MyText>
   <MyText style={styles.feedTime}>
-    {data && data.isOnline ? formatCountdown(remainingTime) : feedTime}
+    {data && data.isOnline ? (remainingTime) : feedTime}
   </MyText>
 </View>
 

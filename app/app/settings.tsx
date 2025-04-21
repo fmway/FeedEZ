@@ -80,7 +80,7 @@ export default function SettingsScreen() {
     setSaving(true);
     Animated.timing(progressAnim, {
       toValue: 1,
-      duration: 2000,
+      duration: 1000,
       useNativeDriver: false,
     }).start(() => {
       onSubmit();
