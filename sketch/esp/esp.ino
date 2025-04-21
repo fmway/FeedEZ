@@ -1,12 +1,11 @@
 #include "ESP8266WiFi.h"
 #include <WebSocketsClient.h>
 
-#define buzzerPin 12
-
 WebSocketsClient ws;
 bool state;
 void setup() {
-  pinMode(buzzerPin, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
   Serial.begin(9600);
   while (!Serial) {}
   WiFi.hostname("FeedEZ");
@@ -17,11 +16,17 @@ void setup() {
   ws.onEvent([] (WStype_t type, uint8_t * payload, size_t length) {
     switch (type) {
       case WStype_CONNECTED:
+      {
+        digitalWrite(LED_BUILTIN, HIGH);
         Serial.println("Connected!!!");
         break;
+      }
       case WStype_DISCONNECTED:
+      {
+        digitalWrite(LED_BUILTIN, LOW);
         Serial.println("Disconnected!!!");
         break;
+      }
       case WStype_TEXT:
       {
         String data = "";
