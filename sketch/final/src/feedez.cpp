@@ -60,7 +60,7 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
     if (time < alarm_stop) {
       if (!this->isRun) {
         this->isRun = true;
-        auto data = String() + F("STATUS_RUN, TRUE, ") + (alarm_stop - time);
+        auto data = F("STATUS_RUN, TRUE");
         Serial.println(data);
         Serial.println(data);
       }
@@ -85,7 +85,7 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
     data.trim();
 
     if (data.equals("GET_STATUS_RUN")) {
-      Serial.println(String() + F("STATUS_RUN, ") + (this->isRun ? (String() + "TRUE, " + (alarm_stop - time)) : "FALSE"));
+      Serial.println(String() + F("STATUS_RUN, ") + (this->isRun ? F("TRUE") : F("FALSE")));
     } else if (data.equals("GET_TIME")) {
       auto now = this->rtc.now();
       Serial.println(String() + now.hour() + ":" + now.minute());
@@ -97,11 +97,11 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
       data.trim();
       if (cmd.equals("SET_SPEED")) {
         this->setSpeed(data.toInt(), false);
-        Serial.println(this->data.speed);
+        // Serial.println(this->data.speed);
       }
       if (cmd.equals("SET_DURATION")) {
         this->setDuration(data.toInt(), false);
-        Serial.println(this->longTime);
+        // Serial.println(this->longTime);
       }
       if (cmd.equals("SET_FEEDING")) {
         int i = 0;
@@ -140,14 +140,14 @@ void FeedEZ::run() {
   if (this->statePrev == 0 || millis() - this->statePrev >= this->intervalAlarm[int(this->isOpen)]) {
     this->statePrev = millis();
     this->isOpen = !this->isOpen;
-    servo.write(this->isOpen ? 45 : 13);
+    servo.write(this->isOpen ? 43 : 15);
   }
 }
 
 void FeedEZ::stop() {
   this->isOpen = false;
   this->statePrev = 0;
-  servo.write(13);
+  servo.write(15);
   din(0);
 }
 
@@ -155,7 +155,7 @@ void FeedEZ::init(uint8_t servo_pin) {
   Serial.begin(9600);
   while (!Serial) {}
   servo.attach(servo_pin);
-  servo.write(13);
+  servo.write(14);
   rtc.begin();
   lcd.init();
   lcd.init();

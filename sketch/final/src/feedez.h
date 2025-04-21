@@ -39,7 +39,7 @@ private:
   Servo servo;
   RTC_DS3231 rtc;
   LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, 16, 2);
-  unsigned long intervalAlarm[2] = { 3000, 80 };
+  unsigned long intervalAlarm[2] = { 3000, 150 };
   unsigned long statePrev = 0;
   bool isOpen = false;
   // int alarm_stop = -1;
