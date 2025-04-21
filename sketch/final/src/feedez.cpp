@@ -1,7 +1,6 @@
 #include "feedez.h"
 #include "mytime.h"
 #include "storage.h"
-#include <stdint.h>
 
 void din(uint8_t speed) {
   analogWrite(5, speed);
@@ -108,6 +107,7 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
         Serial.print("FEEDING");
         while (data.length() > 0) {
           index = data.indexOf(',');
+          i++;
           if (index == -1) {
             Serial.print(String() + ", " + data);
             this->data.feeding_times[i] = data.toInt();
@@ -119,10 +119,9 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
           data = data.substring(index+1);
           data.trim();
           this->data.feeding_times[i] = chunk.toInt();
-          i++;
         }
-        Serial.println();
-        this->data.count_feeding = i;
+        this->data.count_feeding = i / 2;
+        Serial.println(String(", count: ") + this->data.count_feeding);
       }
     }
   }
