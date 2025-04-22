@@ -35,17 +35,18 @@ private:
     uint8_t speed = 3;
     uint8_t count_feeding = 0;
     uint8_t feeding_times[48];
+    uint8_t servo[2] = { 35, 70 };
+    unsigned long intervalAlarm[2] = { 2000, 80 };
+    int el_kecepatan[5] = { 120, 150, 190, 220, 255 };
+    unsigned long longTime = 6 * 60 + 30; // 6 minute 30 second
   } data;
   Servo servo;
   RTC_DS3231 rtc;
   LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, 16, 2);
-  unsigned long intervalAlarm[2] = { 3000, 150 };
   unsigned long statePrev = 0;
   bool isOpen = false;
   // int alarm_stop = -1;
   bool isRun = false;
-  int el_kecepatan[5] = { 120, 150, 190, 220, 255 };
-  unsigned long longTime = 6 * 60 + 30; // 6 minute 30 second
 };
 
 #endif // !_FEED_EZ_H

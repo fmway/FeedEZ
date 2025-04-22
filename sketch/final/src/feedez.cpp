@@ -48,7 +48,7 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
 
   for (uint8_t i = 0; i < this->data.count_feeding; ++i) {
     int start = this->data.feeding_times[i * 2] * 3600 + this->data.feeding_times[i * 2 + 1] * 60;
-    int stop = start + this->longTime;
+    int stop = start + this->data.longTime;
     if (time >= start && time < stop) {
       alarm_stop = stop;
       break;
@@ -129,25 +129,25 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
 }
 
 void FeedEZ::setDuration(unsigned long duration, bool notification) {
-  this->longTime = duration;
+  this->data.longTime = duration;
   if (notification)
     Serial.println(String() + F("SET_DURATION, ") + duration);
 }
 
 void FeedEZ::run() {
   this->showDisplay();
-  din(this->el_kecepatan[this->data.speed -1]);
-  if (this->statePrev == 0 || millis() - this->statePrev >= this->intervalAlarm[int(this->isOpen)]) {
+  din(this->data.el_kecepatan[this->data.speed -1]);
+  if (this->statePrev == 0 || millis() - this->statePrev >= this->data.intervalAlarm[int(this->isOpen)]) {
     this->statePrev = millis();
     this->isOpen = !this->isOpen;
-    servo.write(this->isOpen ? 70 : 25);
+    servo.write(this->isOpen ? this->data.servo[1] : this->data.servo[0]);
   }
 }
 
 void FeedEZ::stop() {
   this->isOpen = false;
   this->statePrev = 0;
-  servo.write(25);
+  servo.write(this->data.servo[0]);
   din(0);
 }
 
@@ -155,7 +155,7 @@ void FeedEZ::init(uint8_t servo_pin) {
   Serial.begin(9600);
   while (!Serial) {}
   servo.attach(servo_pin);
-  servo.write(25);
+  servo.write(this->data.servo[0]);
   rtc.begin();
   lcd.init();
   lcd.init();
@@ -167,7 +167,7 @@ void FeedEZ::init(uint8_t servo_pin) {
 }
 
 void FeedEZ::showDisplay() {
-  this->display.show(lcd, rtc.now(), this->el_kecepatan[this->data.speed - 1]);
+  this->display.show(lcd, rtc.now(), this->data.el_kecepatan[this->data.speed - 1]);
 }
 
 void FeedEZ::save() {
