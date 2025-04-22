@@ -5,7 +5,6 @@ import { getDuration, getFull, getSchedules, getSpeed, setDuration, setSchedules
 import { sign, decode, verify } from "hono/jwt"
 import { boolean } from "drizzle-orm/gel-core";
 import { TZDate } from "npm:@date-fns/tz";
-
 const secretKey = Deno.env.get("SECRET_KEY")!;
 
 const app = new Hono()

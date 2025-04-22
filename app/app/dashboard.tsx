@@ -245,7 +245,7 @@ export default function DashboardScreen() {
     {data && data.isOnline ? "Pakan Sedang Diberikan" : "Pakan Selanjutnya"}
   </MyText>
   <MyText style={styles.feedTime}>
-    {data && data.isOnline ? (remainingTime) : feedTime}
+    {feedTime}
   </MyText>
 </View>
 
