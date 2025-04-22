@@ -107,10 +107,10 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
         Serial.print("FEEDING");
         while (data.length() > 0) {
           index = data.indexOf(',');
-          i++;
           if (index == -1) {
             Serial.print(String() + ", " + data);
             this->data.feeding_times[i] = data.toInt();
+            i++;
             break;
           }
           auto chunk = data.substring(0, index);
@@ -119,9 +119,10 @@ void FeedEZ::on_alarm(vl::Func<void()> f) {
           data = data.substring(index+1);
           data.trim();
           this->data.feeding_times[i] = chunk.toInt();
+          i++;
         }
         this->data.count_feeding = i / 2;
-        Serial.println(String(", count: ") + this->data.count_feeding);
+        Serial.println();
       }
     }
   }
@@ -139,14 +140,14 @@ void FeedEZ::run() {
   if (this->statePrev == 0 || millis() - this->statePrev >= this->intervalAlarm[int(this->isOpen)]) {
     this->statePrev = millis();
     this->isOpen = !this->isOpen;
-    servo.write(this->isOpen ? 43 : 15);
+    servo.write(this->isOpen ? 70 : 25);
   }
 }
 
 void FeedEZ::stop() {
   this->isOpen = false;
   this->statePrev = 0;
-  servo.write(15);
+  servo.write(25);
   din(0);
 }
 
@@ -154,7 +155,7 @@ void FeedEZ::init(uint8_t servo_pin) {
   Serial.begin(9600);
   while (!Serial) {}
   servo.attach(servo_pin);
-  servo.write(14);
+  servo.write(25);
   rtc.begin();
   lcd.init();
   lcd.init();
