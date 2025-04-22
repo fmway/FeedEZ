@@ -15,6 +15,7 @@
     sketch."esp" = {
       fqbn = "esp8266:esp8266:nodemcuv2";
     };
+    sketch."tests/servo".fqbn = "arduino:avr:uno";
     enable = true;
     realPath = true;
     libraries = map (x: pkgs.arduino.lib.${x}.latest) [
