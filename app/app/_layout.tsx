@@ -55,33 +55,53 @@ export default function RootLayout() {
           })
       }
     });
-  }, [])
+  }, []);
+
+  let isManualClose = false;
+  let reconnectTimer: null | NodeJS.Timeout = null;
+
+  const createWS = () => {
+    const ws = new WebSocket("wss://feedez.deno.dev/ws/client");
+    ws.onopen = () => {
+      console.log("WebSocket connection opened");
+    };
+    ws.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        // Misalnya, periksa properti isOnline
+        console.log(e.data)
+        setData(data);
+      } catch (err) {
+        console.error("Error parsing WebSocket data:", err);
+      }
+    };
+    ws.onerror = (e) => {
+      console.error("WebSocket error:", e);
+    };
+    ws.onclose = (e) => {
+      console.log("WebSocket connection closed:", e.code, e.reason);
+      if (!isManualClose) {
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+
+        reconnectTimer = setTimeout(() => {
+          console.log("Reconnect");
+          const ws = createWS();
+          setWs(ws);
+        }, 200)
+      }
+    };
+
+    return ws;
+  };
 
   // Inisialisasi WebSocket di level layout
   useEffect(() => {
     if (!token) {
-      const ws = new WebSocket("wss://feedez.deno.dev/ws/client");
-      ws.onopen = () => {
-        console.log("WebSocket connection opened");
-      };
-      ws.onmessage = (e) => {
-        try {
-          const data = JSON.parse(e.data);
-          // Misalnya, periksa properti isOnline
-          console.log(e.data)
-          setData(data);
-        } catch (err) {
-          console.error("Error parsing WebSocket data:", err);
-        }
-      };
-      ws.onerror = (e) => {
-        console.error("WebSocket error:", e);
-      };
-      ws.onclose = (e) => {
-        console.log("WebSocket connection closed:", e.code, e.reason);
-      };
+      const ws = createWS();
       setWs(ws);
       return () => {
+        isManualClose = true;
+        if (reconnectTimer) clearTimeout(reconnectTimer);
         ws.close();
       };
     }

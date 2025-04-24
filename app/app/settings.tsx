@@ -39,8 +39,8 @@ export default function SettingsScreen() {
         const setting = x as Setting;
         setCurrentSpeed(setting.speed);
         setDuration(setting.duration);
-        setSelectedMinutes(Math.floor(setting.duration / 60));
-        setSelectedSeconds(setting.duration % 60);
+        setSelectedMinutes(Math.floor(setting.duration / 60) + 1);
+        setSelectedSeconds(setting.duration % 60 + 1);
         setTimeout(() => setLoading(false), 750);
       });
   }, []);
@@ -70,7 +70,7 @@ export default function SettingsScreen() {
 
   // Konfirmasi pilihan durasi dari Picker
   const handleConfirm = () => {
-    const totalSeconds = selectedMinutes * 60 + selectedSeconds;
+    const totalSeconds = (selectedMinutes - 1) * 60 + (selectedSeconds - 1);
     setDuration(totalSeconds);
     hidePicker();
   };
@@ -100,8 +100,8 @@ export default function SettingsScreen() {
       }),
       method: 'POST',
     });
-    const respons = await request.json();
-    console.log(respons);
+    const respon = await request.json();
+    console.log(respon);
   };
 
   return (
@@ -168,20 +168,20 @@ export default function SettingsScreen() {
               <Picker
                 selectedValue={selectedMinutes}
                 style={styles.picker}
-                onValueChange={(itemValue) => setSelectedMinutes(itemValue)}
+                onValueChange={(itemValue) => { setSelectedMinutes(itemValue); }}
               >
-                {Array.from({ length: 61 }, (_, i) => i).map((num) => (
-                  <Picker.Item key={num} label={num.toString()} value={num} />
+                {Array.from({ length: 60 }, (_, i) => i).map((num) => (
+                  <Picker.Item key={num} label={num.toString()} value={num + 1} />
                 ))}
               </Picker>
               <MyText style={styles.separator}>:</MyText>
               <Picker
                 selectedValue={selectedSeconds}
                 style={styles.picker}
-                onValueChange={(itemValue) => setSelectedSeconds(itemValue)}
+                onValueChange={(itemValue) => { setSelectedSeconds(itemValue); }}
               >
                 {Array.from({ length: 60 }, (_, i) => i).map((num) => (
-                  <Picker.Item key={num} label={num.toString()} value={num} />
+                  <Picker.Item key={num} label={num.toString()} value={num + 1} />
                 ))}
               </Picker>
             </View>
